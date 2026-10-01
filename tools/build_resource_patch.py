@@ -63,11 +63,23 @@ def build(source, output, url, revision, min_app, max_app, notes=''):
         if file.is_dir():
             continue
         name = file.relative_to(source).as_posix()
-        if name != 'maps/main.json' and not re.fullmatch(r'textures/[a-z0-9_-]{1,80}\.png', name):
+        is_map = name == 'maps/main.json'
+        is_png = re.fullmatch(r'textures/[a-z0-9_-]{1,80}\.png', name)
+        is_wav = re.fullmatch(r'audio/[a-z0-9_-]{1,80}\.wav', name)
+        if not (is_map or is_png or is_wav):
             raise ValueError('forbidden path: ' + name)
         raw = file.read_bytes()
         if not 0 < len(raw) <= MAX_FILE:
             raise ValueError('invalid file size: ' + name)
+        if is_wav:
+            if len(raw) < 44 or raw[:4] != b'RIFF' or raw[8:12] != b'WAVE':
+                raise ValueError('invalid WAV: ' + name)
+            channels, rate = struct.unpack('<HI', raw[22:28])
+            bits = struct.unpack('<H', raw[34:36])[0]
+            if not 1 <= channels <= 2 or not 8000 <= rate <= 48000 or bits not in (8, 16):
+                raise ValueError('unsupported WAV params: ' + name)
+            if len(raw) > 2 * 1024 * 1024:
+                raise ValueError('WAV too large: ' + name)
         if name.endswith('.png'):
             if len(raw) < 24 or raw[:8] != b'\x89PNG\r\n\x1a\n':
                 raise ValueError('invalid PNG')

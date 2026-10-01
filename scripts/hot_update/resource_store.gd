@@ -1,6 +1,6 @@
 extends RefCounted
 ## Restricted, non-executable resource ZIPs. Never mount untrusted PCK/scene/script files.
-const APP_VERSION := "1.2.7"
+const APP_VERSION := "1.2.8"
 const ROOT := "user://resource_updates"
 const MAX_ARCHIVE := 32 * 1024 * 1024
 const MAX_FILE := 8 * 1024 * 1024
@@ -62,9 +62,13 @@ func validate_manifest(m: Dictionary) -> bool:
 func _allowed_path(path: String) -> bool:
 	if path == "maps/main.json":
 		return true
+	if path.begins_with("audio/") and path.ends_with(".wav"):
+		return _allowed_leaf(path.trim_prefix("audio/").trim_suffix(".wav"))
 	if not path.begins_with("textures/") or not path.ends_with(".png"):
 		return false
-	var name := path.trim_prefix("textures/").trim_suffix(".png")
+	return _allowed_leaf(path.trim_prefix("textures/").trim_suffix(".png"))
+
+func _allowed_leaf(name: String) -> bool:
 	if name.is_empty() or name.length() > 80:
 		return false
 	for c in name:
@@ -153,6 +157,23 @@ func _read_archive(path: String, m: Dictionary) -> Dictionary:
 				fail("PNG 无效或超过 2048px")
 				zip.close()
 				return {}
+		elif name.ends_with(".wav"):
+			# RIFF/WAVE header only: no codec support, no arbitrary payload.
+			if bytes.size() < 44 or bytes.slice(0, 4) != PackedByteArray([82,73,70,70]) or bytes.slice(8, 12) != PackedByteArray([87,65,86,69]):
+				fail("WAV 格式错误")
+				zip.close()
+				return {}
+			var channels := _little_endian(bytes, 22)
+			var rate := _little_endian(bytes, 24)
+			var bits := _little_endian(bytes, 34)
+			if channels < 1 or channels > 2 or rate < 8000 or rate > 48000 or not (bits == 8 or bits == 16):
+				fail("WAV 参数不受支持")
+				zip.close()
+				return {}
+			if bytes.size() > 2 * 1024 * 1024:
+				fail("音频文件过大")
+				zip.close()
+				return {}
 		result[name] = bytes
 	zip.close()
 	var parsed: Variant = JSON.parse_string(result["maps/main.json"].get_string_from_utf8())
@@ -163,6 +184,18 @@ func _read_archive(path: String, m: Dictionary) -> Dictionary:
 
 func _big_endian(bytes: PackedByteArray, offset: int) -> int:
 	return (int(bytes[offset]) << 24) | (int(bytes[offset+1]) << 16) | (int(bytes[offset+2]) << 8) | int(bytes[offset+3])
+
+func _little_endian(bytes: PackedByteArray, offset: int) -> int:
+	return int(bytes[offset]) | (int(bytes[offset+1]) << 8) | (int(bytes[offset+2]) << 16) | (int(bytes[offset+3]) << 24)
+
+func audio_path(name: String) -> String:
+	if active_dir.is_empty() or not _allowed_path("audio/" + name + ".wav"):
+		return ""
+	var p := active_dir + "/audio/" + name + ".wav"
+	return p if FileAccess.file_exists(p) else ""
+
+func has_audio() -> bool:
+	return not audio_path("fire").is_empty()
 
 func _safe_zip(path: String) -> bool:
 	var f := FileAccess.open(path, FileAccess.READ)

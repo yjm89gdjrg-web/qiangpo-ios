@@ -60,6 +60,9 @@ func _launch() -> void:
 		push_error("无法加载内置关卡")
 		return
 	var main: Node3D = packed.instantiate() as Node3D
+	var audio = load("res://scripts/hot_update/audio_manager.gd").new()
+	audio.refresh(store)
+	main.set_meta("audio_ready", audio.has_any())
 	store.apply_map(main)
 	main.set_meta("active_resource_revision", int(store.active_manifest.get("revision", 0)))
 	main.set_meta("resource_boot_error", store.last_error)

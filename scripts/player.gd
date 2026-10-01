@@ -42,12 +42,15 @@ var hud_firing: bool = false
 var round_manager: Node
 var move_region := Rect2()
 var mouse_firing := false
+const Audio = preload("res://scripts/hot_update/audio_manager.gd")
+var sfx = Audio.new()
 
 @onready var head := $Head
 @onready var camera := $Head/Camera3D
 @onready var weapon_root := $Head/Camera3D/WeaponRoot
 
 func _ready() -> void:
+	sfx.attach(self)
 	_apply_weapon()
 	# 触屏优先：不锁定鼠标，避免手机上一开局就乱转
 	if OS.has_feature("web") or OS.has_feature("editor"):
@@ -73,6 +76,7 @@ func _switch_weapon(idx: int) -> void:
 		return
 	weapon_idx = idx
 	_apply_weapon()
+	sfx.play("switch", -6.0)
 
 func reset_mobile_input() -> void:
 	move_touch_id = -1
@@ -176,6 +180,7 @@ func _physics_process(delta: float) -> void:
 
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = JUMP_VELOCITY
+		sfx.play("jump", -10.0)
 
 	var speed := SPRINT_SPEED if Input.is_key_pressed(KEY_SHIFT) else SPEED
 	var dir := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
@@ -203,6 +208,7 @@ func _fire() -> void:
 	fire_timer = w["rate"]
 	ammo -= 1
 	recoil += w["kick"]
+	sfx.play("fire", -8.0)
 
 	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
 	var origin: Vector3 = camera.global_transform.origin
@@ -217,6 +223,7 @@ func _fire() -> void:
 		var hit: Node = result.collider as Node
 		if hit and hit.is_in_group("enemy"):
 			hit.take_damage(int(w["dmg"]))
+			sfx.play("hit", -6.0)
 			if hit.hp <= 0:
 				kills += 1
 		_spawn_impact(result.position as Vector3)
@@ -228,6 +235,7 @@ func _reload() -> void:
 	if reloading:
 		return
 	reloading = true
+	sfx.play("reload", -6.0)
 	await get_tree().create_timer(1.4, false).timeout
 	ammo = _cur()["ammo"]
 	reloading = false
@@ -249,6 +257,7 @@ func take_damage(amount: int) -> void:
 	hp -= amount
 	if hp <= 0:
 		hp = 0
+		sfx.play("die")
 		get_tree().call_deferred("reload_current_scene")
 
 func get_hud_text() -> String:

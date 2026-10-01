@@ -15,8 +15,11 @@ var site_name := "A点"
 var site_position := Vector3.ZERO
 var player: Node3D
 var sites: Array[Node3D] = []
+const Audio = preload("res://scripts/hot_update/audio_manager.gd")
+var sfx = Audio.new()
 
 func _ready() -> void:
+	sfx.attach(self)
 	player = get_tree().get_first_node_in_group("player")
 	for n in get_tree().get_nodes_in_group("bomb_site"):
 		sites.append(n)
@@ -34,6 +37,7 @@ func _process(delta: float) -> void:
 			bomb_planted = true
 			bomb_timer = BOMB_TIME
 			phase = "炸弹已安装！"
+			sfx.play("plant")
 		return
 	if action_timer < 0.0:
 		action_timer += delta
@@ -41,6 +45,7 @@ func _process(delta: float) -> void:
 			bomb_planted = false
 			result = "防守方胜利！炸弹已拆除"
 			phase = result
+			sfx.play("switch", -4.0)
 		return
 	if bomb_planted:
 		bomb_timer -= delta
@@ -48,6 +53,7 @@ func _process(delta: float) -> void:
 		if bomb_timer <= 0.0:
 			result = "进攻方胜利！目标已爆炸"
 			phase = result
+			sfx.play("explode")
 			return
 	if not bomb_planted and player and player.global_position.distance_to(site_position) <= SITE_RADIUS:
 		phase = "在 %s 按 E 下包" % site_name
