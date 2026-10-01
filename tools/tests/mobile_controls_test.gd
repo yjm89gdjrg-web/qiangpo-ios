@@ -187,6 +187,68 @@ func run() -> void:
 		for button in [hud.fire_button, hud.jump_button, hud.weapon_button, hud.action_button]:
 			check(button.position.x >= 0 and button.position.y >= 0 and button.get_rect().end.x <= vp.x + 0.01 and button.get_rect().end.y <= vp.y + 0.01, "actual HUD %s onscreen at %s" % [button.name, vp])
 		check(player.move_region == hud.layout.rect_for("move", Vector2(vp)), "player joystick follows viewport/layout at %s" % vp)
+	# Hold the joystick with one finger while tapping action buttons with a second:
+	# a Button's default mouse filter used to swallow that second touch.
+	var move_down := InputEventScreenTouch.new()
+	move_down.index = 21
+	move_down.pressed = true
+	move_down.position = player.move_region.get_center()
+	player._unhandled_input(move_down)
+	check(player.move_touch_id == 21, "second-finger test: joystick engaged")
+	var before_weapon: int = player.weapon_idx
+	var tap := InputEventScreenTouch.new()
+	tap.pressed = true
+	tap.position = hud.weapon_button.get_rect().get_center()
+	tap.index = 22
+	hud.weapon_button.gui_input.emit(tap)
+	check(player.weapon_idx != before_weapon, "switch works while joystick is held")
+	var released := InputEventScreenTouch.new()
+	released.pressed = false
+	released.index = 22
+	hud.weapon_button.gui_input.emit(released)
+	player.velocity = Vector3.ZERO
+	player.position.y = 0.05
+	for i in range(8):
+		await physics_frame
+	var tap_jump := InputEventScreenTouch.new()
+	tap_jump.pressed = true
+	tap_jump.position = hud.jump_button.get_rect().get_center()
+	tap_jump.index = 23
+	hud.jump_button.gui_input.emit(tap_jump)
+	check(player.velocity.y == player.JUMP_VELOCITY, "jump works while joystick is held")
+	var jump_up := InputEventScreenTouch.new()
+	jump_up.pressed = false
+	jump_up.index = 23
+	hud.jump_button.gui_input.emit(jump_up)
+	var tap_plant := InputEventScreenTouch.new()
+	tap_plant.pressed = true
+	tap_plant.position = hud.action_button.get_rect().get_center()
+	tap_plant.index = 24
+	main.get_node("RoundManager").bomb_planted = false
+	hud.action_button.gui_input.emit(tap_plant)
+	check(main.get_node("RoundManager").action_timer > 0 or main.get_node("RoundManager").bomb_planted, "plant works while joystick is held")
+	var plant_up := InputEventScreenTouch.new()
+	plant_up.pressed = false
+	plant_up.index = 24
+	hud.action_button.gui_input.emit(plant_up)
+	# Fire button keeps working too, and the joystick is still held throughout.
+	var tap_fire := InputEventScreenTouch.new()
+	tap_fire.pressed = true
+	tap_fire.position = hud.fire_button.get_rect().get_center()
+	tap_fire.index = 25
+	hud.fire_button.gui_input.emit(tap_fire)
+	check(player.hud_firing, "fire works while joystick is held")
+	var fire_up := InputEventScreenTouch.new()
+	fire_up.pressed = false
+	fire_up.index = 25
+	hud.fire_button.gui_input.emit(fire_up)
+	check(not player.hud_firing, "fire releases")
+	check(player.move_touch_id == 21, "joystick still held after all taps")
+	var move_up := InputEventScreenTouch.new()
+	move_up.pressed = false
+	move_up.index = 21
+	player._input(move_up)
+	check(player.move_touch_id == -1, "joystick releases after taps")
 	main.queue_free()
 	await process_frame
 	print("MOBILE CONTROLS: ", failures, " failure(s)")

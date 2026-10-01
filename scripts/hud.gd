@@ -26,12 +26,13 @@ func _ready() -> void:
 	weapon_button = get_node_or_null("WeaponButton") as Button
 	jump_button = get_node_or_null("JumpButton") as Button
 	fire_button = get_node_or_null("FireButton") as Button
-	if action_button and not action_button.pressed.is_connected(_on_action):
-		action_button.pressed.connect(_on_action)
-	if weapon_button and not weapon_button.pressed.is_connected(_on_switch):
-		weapon_button.pressed.connect(_on_switch)
-	if jump_button and not jump_button.pressed.is_connected(_on_jump):
-		jump_button.pressed.connect(_on_jump)
+	# Multi-touch: a Button's default mouse filter swallows a touch so it never
+	# reaches the game layer, which makes "hold move + tap jump" unreliable.
+	# Handle ScreenTouch explicitly on each button instead of the pressed signal.
+	for control in [action_button, weapon_button, jump_button]:
+		if control:
+			control.mouse_filter = Control.MOUSE_FILTER_PASS
+			control.gui_input.connect(_action_button_input.bind(control))
 	if fire_button:
 		fire_button.button_down.connect(_on_fire_down)
 		fire_button.button_up.connect(_on_fire_up)
@@ -131,6 +132,34 @@ func _layout() -> void:
 		player.move_region = layout.rect_for("move", vp)
 		player.reset_mobile_input()
 
+func _action_button_input(event: InputEvent, control: Button) -> void:
+	if get_tree().paused:
+		return
+	var touch := event as InputEventScreenTouch
+	if touch:
+		if touch.pressed:
+			control.set_pressed_no_signal(true)
+			control.accept_event()
+			if control == action_button:
+				_on_action()
+			elif control == weapon_button:
+				_on_switch()
+			elif control == jump_button:
+				_on_jump()
+		else:
+			control.set_pressed_no_signal(false)
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if (event as InputEventMouseButton).pressed:
+			control.set_pressed_no_signal(true)
+			if control == action_button:
+				_on_action()
+			elif control == weapon_button:
+				_on_switch()
+			elif control == jump_button:
+				_on_jump()
+		else:
+			control.set_pressed_no_signal(false)
+
 func _style_button(button: Button) -> void:
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(0.12, 0.20, 0.28, 0.55)
@@ -197,3 +226,9 @@ func _input(event: InputEvent) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		_on_fire_up()
+		_clear_action_buttons()
+
+func _clear_action_buttons() -> void:
+	for control in [action_button, weapon_button, jump_button]:
+		if control:
+			control.set_pressed_no_signal(false)
