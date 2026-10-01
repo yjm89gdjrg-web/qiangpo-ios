@@ -1,6 +1,6 @@
 extends RefCounted
 ## Restricted, non-executable resource ZIPs. Never mount untrusted PCK/scene/script files.
-const APP_VERSION := "1.2.8"
+const APP_VERSION := "1.2.9"
 const ROOT := "user://resource_updates"
 const MAX_ARCHIVE := 32 * 1024 * 1024
 const MAX_FILE := 8 * 1024 * 1024
@@ -163,9 +163,9 @@ func _read_archive(path: String, m: Dictionary) -> Dictionary:
 				fail("WAV 格式错误")
 				zip.close()
 				return {}
-			var channels := _little_endian(bytes, 22)
+			var channels := _le16(bytes, 22)
 			var rate := _little_endian(bytes, 24)
-			var bits := _little_endian(bytes, 34)
+			var bits := _le16(bytes, 34)
 			if channels < 1 or channels > 2 or rate < 8000 or rate > 48000 or not (bits == 8 or bits == 16):
 				fail("WAV 参数不受支持")
 				zip.close()
@@ -187,6 +187,10 @@ func _big_endian(bytes: PackedByteArray, offset: int) -> int:
 
 func _little_endian(bytes: PackedByteArray, offset: int) -> int:
 	return int(bytes[offset]) | (int(bytes[offset+1]) << 8) | (int(bytes[offset+2]) << 16) | (int(bytes[offset+3]) << 24)
+
+func _le16(bytes: PackedByteArray, offset: int) -> int:
+	# WAV channels/bits-per-sample are 16-bit fields, NOT 32-bit.
+	return int(bytes[offset]) | (int(bytes[offset+1]) << 8)
 
 func audio_path(name: String) -> String:
 	if active_dir.is_empty() or not _allowed_path("audio/" + name + ".wav"):

@@ -32,6 +32,21 @@ def png():
             chunk(b'IDAT', zlib.compress(b'\x00\x20\x60\xcc\x20\x60\xcc' * 2)) + chunk(b'IEND', b''))
 
 
+def wav(rate=22050, bits=16, channels=1, frames=400):
+    """Minimal valid PCM WAV. channels/bits are 16-bit fields."""
+    import math
+    block = channels * (bits // 8)
+    body = bytearray()
+    for i in range(frames):
+        value = int(20000 * math.sin(2 * math.pi * 440 * i / rate))
+        chunk = (value & 0xFFFF).to_bytes(2, 'little') if bits == 16 else bytes([(value >> 8) & 0xFF ^ 0x80])
+        body += chunk * channels
+    data = bytes(body)
+    fmt = struct.pack('<HHIIHH', 1, channels, rate, rate * block, block, bits)
+    return (b'RIFF' + struct.pack('<I', 36 + len(data)) + b'WAVE' +
+            b'fmt ' + struct.pack('<I', len(fmt)) + fmt + b'data' + struct.pack('<I', len(data)) + data)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--godot', default='/home/ubuntu/qiangpo/tools/Godot_v4.4.1-stable_linux.x86_64')
@@ -45,6 +60,8 @@ def main():
         data = json.loads((source / 'maps/main.json').read_text())
         data['ground_texture'] = 'textures/grid.png'
         (source / 'maps/main.json').write_text(json.dumps(data))
+        (source / 'audio').mkdir()
+        (source / 'audio/fire.wav').write_bytes(wav())
         url = builder.PREFIX + 'resources-r7.zip'
         manifest = builder.build(source, output, url, 7, '0.0.1', '998.0.0', 'Test visual patch')
         first = (output / 'resources-r7.zip').read_bytes()
@@ -75,6 +92,25 @@ def main():
                 path.write_bytes(raw)
             if name == 'truncated':
                 path.write_bytes(path.read_bytes()[:-10])
+        # A real 16-bit mono 22.05k WAV must be ACCEPTED (guards the 16-bit-field bug).
+        assert builder.build(source, output, url, 7, '0.0.1', '998.0.0')['revision'] == 7
+        print('PASS builder accepts valid audio/fire.wav', flush=True)
+        for label, kwargs in (('channels', dict(channels=9)), ('rate', dict(rate=100)), ('bits', dict(bits=7))):
+            (source / 'audio/fire.wav').write_bytes(wav(**kwargs))
+            try:
+                builder.build(source, output, url, 7, '0.0.1', '998.0.0')
+                raise AssertionError('builder accepted bad WAV %s' % label)
+            except ValueError:
+                print('PASS builder rejects bad WAV %s' % label, flush=True)
+        (source / 'audio/fire.wav').write_bytes(wav())
+        # Non-WAV payload in the audio slot must be rejected too.
+        (source / 'audio/fire.wav').write_bytes(b'not a wav at all')
+        try:
+            builder.build(source, output, url, 7, '0.0.1', '998.0.0')
+            raise AssertionError('builder accepted non-WAV audio')
+        except ValueError:
+            print('PASS builder rejects non-WAV payload in audio slot', flush=True)
+        (source / 'audio/fire.wav').write_bytes(wav())
         # Builder itself rejects script files instead of quietly ignoring them.
         (source / 'evil.gd').write_text('extends Node')
         try:
