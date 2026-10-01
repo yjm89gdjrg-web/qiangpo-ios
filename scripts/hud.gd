@@ -17,6 +17,7 @@ var settings: CanvasLayer
 var settings_button: Button
 var move_region: Panel
 var fire_pointer := -1
+var crosshair: Control
 
 func _ready() -> void:
 	layer = 10
@@ -34,6 +35,30 @@ func _ready() -> void:
 	if fire_button:
 		fire_button.button_down.connect(_on_fire_down)
 		fire_button.button_up.connect(_on_fire_up)
+	crosshair = Control.new()
+	crosshair.name = "Crosshair"
+	crosshair.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	crosshair.size = Vector2(44, 44)
+	var accent := Color(0.85, 0.95, 1.0, 0.85)
+	for i in 4:
+		var arm := ColorRect.new()
+		arm.color = accent
+		arm.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var long := Vector2(14, 2)
+		if i >= 2:
+			long = Vector2(2, 14)
+		arm.size = long
+		var gap := 6.0
+		if i == 0:
+			arm.position = Vector2(22 - 14 - gap, 21)
+		elif i == 1:
+			arm.position = Vector2(22 + gap, 21)
+		elif i == 2:
+			arm.position = Vector2(21, 22 - 14 - gap)
+		else:
+			arm.position = Vector2(21, 22 + gap)
+		crosshair.add_child(arm)
+	add_child(crosshair)
 	move_region = Panel.new()
 	move_region.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var style := StyleBoxFlat.new()
@@ -74,10 +99,13 @@ func _layout() -> void:
 	if vp.x <= 0 or vp.y <= 0:
 		vp = Vector2(1280, 720)
 	layout.load_settings()
+	var area := layout.usable_rect(vp)
+	if crosshair:
+		crosshair.position = (area.position + area.size * 0.5 - crosshair.size * 0.5).round()
 	if status:
 		status.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		status.position = Vector2(18, 18)
-		status.size = Vector2(vp.x * 0.70, vp.y * 0.16)
+		status.position = area.position + Vector2(18, 18)
+		status.size = Vector2(area.size.x * 0.70, area.size.y * 0.16)
 		status.add_theme_font_size_override("font_size", int(clamp(vp.y * 0.035, 18.0, 34.0)))
 	var controls := {"fire": fire_button, "jump": jump_button, "switch": weapon_button, "plant": action_button, "move": move_region}
 	for id in controls:
@@ -90,15 +118,31 @@ func _layout() -> void:
 		control.size = rect.size
 		control.position = rect.position
 		control.add_theme_font_size_override("font_size", int(clamp(vp.y * 0.03, 16.0, 28.0)))
+		if control is Button:
+			_style_button(control as Button)
 	weapon_button.text = "换枪"
 	jump_button.text = "跳跃"
 	fire_button.text = "开火"
 	move_region.visible = layout.show_joystick
 	settings_button.size = Vector2(90, 44)
-	settings_button.position = Vector2(maxf(0, vp.x - 108), 18)
+	settings_button.position = area.position + Vector2(maxf(0, area.size.x - 108), 18)
+	_style_button(settings_button)
 	if is_instance_valid(player):
 		player.move_region = layout.rect_for("move", vp)
 		player.reset_mobile_input()
+
+func _style_button(button: Button) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.12, 0.20, 0.28, 0.55)
+	normal.border_color = Color(0.72, 0.88, 1.0, 0.75)
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(14)
+	var pressed := normal.duplicate()
+	pressed.bg_color = Color(0.95, 0.72, 0.25, 0.80)
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", normal)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_color_override("font_color", Color(0.95, 0.98, 1.0, 1.0))
 
 func _process(_delta: float) -> void:
 	var vp := get_viewport().get_visible_rect().size

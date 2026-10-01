@@ -64,7 +64,8 @@ func _ready() -> void:
 		editor.add_child(handle)
 		handles[id] = handle
 	var toolbar := VBoxContainer.new()
-	toolbar.position = Vector2(12, 8)
+	var area := layout.usable_rect(get_viewport().get_visible_rect().size)
+	toolbar.position = area.position + Vector2(12, 8)
 	toolbar.custom_minimum_size = Vector2(300, 0)
 	editor.add_child(toolbar)
 	selection = Label.new()

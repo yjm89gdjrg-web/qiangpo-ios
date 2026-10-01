@@ -8,7 +8,7 @@ config_version=5
 config/name="枪破黎明·雏形"
 config/description="ShotDawn FPS prototype with original procedural primitive shapes; no extracted game assets"
 run/main_scene="res://scenes/boot.tscn"
-config/version="1.2.5"
+config/version="1.2.6"
 config/features=PackedStringArray("4.4", "GL Compatibility")
 config/icon="res://icon.svg"
 
