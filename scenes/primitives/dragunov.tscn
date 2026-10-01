@@ -1,93 +1,214 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=26 format=3]
 
 [sub_resource type="StandardMaterial3D" id="Mat_dark"]
-albedo_color = Color(0.10, 0.12, 0.16, 1)
-roughness = 0.8
+albedo_color = Color(0.09, 0.1, 0.11, 1)
+metallic = 0.4
+roughness = 0.5
 
 [sub_resource type="StandardMaterial3D" id="Mat_metal"]
-albedo_color = Color(0.32, 0.36, 0.40, 1)
-roughness = 0.8
+albedo_color = Color(0.3, 0.32, 0.36, 1)
+metallic = 0.85
+roughness = 0.3
+
+[sub_resource type="StandardMaterial3D" id="Mat_wood"]
+albedo_color = Color(0.35, 0.18, 0.09, 1)
+metallic = 0.05
+roughness = 0.7
 
 [sub_resource type="StandardMaterial3D" id="Mat_accent"]
-albedo_color = Color(0.32, 0.38, 0.20, 1)
-roughness = 0.8
+albedo_color = Color(0.2, 0.12, 0.05, 1)
+metallic = 0.2
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="Mat_glass"]
+albedo_color = Color(0.02, 0.03, 0.08, 1)
+metallic = 0
+roughness = 0.05
 
 [sub_resource type="BoxMesh" id="Mesh_0"]
-size = Vector3(0.10, 0.10, 0.34)
+size = Vector3(0.075, 0.1, 0.3)
 
 [sub_resource type="CylinderMesh" id="Mesh_1"]
-top_radius = 0.024
-bottom_radius = 0.024
-height = 0.5060000000000001
+top_radius = 0.013
+bottom_radius = 0.013
+height = 0.39
 radial_segments = 12
 
 [sub_resource type="BoxMesh" id="Mesh_2"]
-size = Vector3(0.075, 0.16, 0.09)
+size = Vector3(0.06, 0.06, 0.16)
 
 [sub_resource type="BoxMesh" id="Mesh_3"]
-size = Vector3(0.025, 0.035, 0.035)
+size = Vector3(0.05, 0.035, 0.14)
 
-[sub_resource type="BoxMesh" id="Mesh_4"]
-size = Vector3(0.085, 0.11, 0.20)
+[sub_resource type="CylinderMesh" id="Mesh_4"]
+top_radius = 0.01
+bottom_radius = 0.01
+height = 0.2
+radial_segments = 12
 
 [sub_resource type="BoxMesh" id="Mesh_5"]
-size = Vector3(0.07, 0.18, 0.10)
+size = Vector3(0.03, 0.04, 0.05)
 
-[sub_resource type="BoxMesh" id="Mesh_6"]
-size = Vector3(0.09, 0.09, 0.18)
-
-[sub_resource type="CylinderMesh" id="Mesh_7"]
-top_radius = 0.043
-bottom_radius = 0.043
-height = 0.22
+[sub_resource type="CylinderMesh" id="Mesh_6"]
+top_radius = 0.016
+bottom_radius = 0.016
+height = 0.05
 radial_segments = 12
+
+[sub_resource type="BoxMesh" id="Mesh_7"]
+size = Vector3(0.028, 0.03, 0.03)
+
+[sub_resource type="BoxMesh" id="Mesh_8"]
+size = Vector3(0.01, 0.03, 0.01)
+
+[sub_resource type="CylinderMesh" id="Mesh_9"]
+top_radius = 0.026
+bottom_radius = 0.026
+height = 0.24
+radial_segments = 12
+
+[sub_resource type="CylinderMesh" id="Mesh_10"]
+top_radius = 0.032
+bottom_radius = 0.032
+height = 0.03
+radial_segments = 12
+
+[sub_resource type="CylinderMesh" id="Mesh_11"]
+top_radius = 0.026
+bottom_radius = 0.026
+height = 0.006
+radial_segments = 12
+
+[sub_resource type="BoxMesh" id="Mesh_12"]
+size = Vector3(0.02, 0.055, 0.08)
+
+[sub_resource type="BoxMesh" id="Mesh_13"]
+size = Vector3(0.05, 0.12, 0.06)
+
+[sub_resource type="BoxMesh" id="Mesh_14"]
+size = Vector3(0.045, 0.1, 0.08)
+
+[sub_resource type="BoxMesh" id="Mesh_15"]
+size = Vector3(0.028, 0.012, 0.065)
+
+[sub_resource type="BoxMesh" id="Mesh_16"]
+size = Vector3(0.03, 0.03, 0.19)
+
+[sub_resource type="BoxMesh" id="Mesh_17"]
+size = Vector3(0.03, 0.03, 0.17)
+
+[sub_resource type="BoxMesh" id="Mesh_18"]
+size = Vector3(0.045, 0.03, 0.15)
+
+[sub_resource type="BoxMesh" id="Mesh_19"]
+size = Vector3(0.05, 0.14, 0.025)
 
 [node name="dragunov" type="Node3D"]
 
 [node name="Receiver" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0, -0.10)
-rotation = Vector3(0, 0, 0)
+position = Vector3(0, 0, -0.05)
 mesh = SubResource("Mesh_0")
 material_override = SubResource("Mat_dark")
 
 [node name="Barrel" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.01, -0.42300000000000004)
-rotation = Vector3(1.5707963, 0, 0)
+position = Vector3(0, 0.015, -0.485)
+rotation = Vector3(1.570796, 0, 0)
 mesh = SubResource("Mesh_1")
 material_override = SubResource("Mat_metal")
 
-[node name="Grip" type="MeshInstance3D" parent="."]
-position = Vector3(0, -0.11, 0)
-rotation = Vector3(-0.20, 0, 0)
+[node name="Handguard" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0, -0.33)
 mesh = SubResource("Mesh_2")
-material_override = SubResource("Mat_accent")
+material_override = SubResource("Mat_wood")
 
-[node name="TopSight" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.067, -0.238)
-rotation = Vector3(0, 0, 0)
+[node name="HandguardUpper" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.045, -0.32)
 mesh = SubResource("Mesh_3")
-material_override = SubResource("Mat_accent")
+material_override = SubResource("Mat_wood")
 
-[node name="Stock" type="MeshInstance3D" parent="."]
-position = Vector3(0, -0.025, 0.16)
-rotation = Vector3(0, 0, 0)
+[node name="GasTube" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.052, -0.3)
+rotation = Vector3(1.570796, 0, 0)
 mesh = SubResource("Mesh_4")
-material_override = SubResource("Mat_accent")
+material_override = SubResource("Mat_metal")
+
+[node name="GasBlock" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.04, -0.42)
+mesh = SubResource("Mesh_5")
+material_override = SubResource("Mat_metal")
+
+[node name="MuzzleDevice" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.015, -0.685)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_6")
+material_override = SubResource("Mat_metal")
+
+[node name="FrontSightBase" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.045, -0.58)
+mesh = SubResource("Mesh_7")
+material_override = SubResource("Mat_metal")
+
+[node name="FrontSightPost" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.075, -0.58)
+mesh = SubResource("Mesh_8")
+material_override = SubResource("Mat_metal")
+
+[node name="ScopeBody" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.1, -0.06)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_9")
+material_override = SubResource("Mat_dark")
+
+[node name="ScopeObjective" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.1, -0.195)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_10")
+material_override = SubResource("Mat_dark")
+
+[node name="ScopeLens" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.1, -0.208)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_11")
+material_override = SubResource("Mat_glass")
+
+[node name="ScopeMount" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.058, -0.05)
+mesh = SubResource("Mesh_12")
+material_override = SubResource("Mat_dark")
+
+[node name="PistolGrip" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.095, 0)
+rotation = Vector3(-0.3, 0, 0)
+mesh = SubResource("Mesh_13")
+material_override = SubResource("Mat_wood")
 
 [node name="Magazine" type="MeshInstance3D" parent="."]
-position = Vector3(0, -0.13, -0.16)
-rotation = Vector3(0.10, 0, 0)
-mesh = SubResource("Mesh_5")
+position = Vector3(0, -0.1, -0.07)
+rotation = Vector3(0.15, 0, 0)
+mesh = SubResource("Mesh_14")
 material_override = SubResource("Mat_accent")
 
-[node name="Foregrip" type="MeshInstance3D" parent="."]
-position = Vector3(0, -0.015, -0.25)
-rotation = Vector3(0, 0, 0)
-mesh = SubResource("Mesh_6")
-material_override = SubResource("Mat_accent")
+[node name="TriggerGuard" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.052, -0.04)
+mesh = SubResource("Mesh_15")
+material_override = SubResource("Mat_dark")
 
-[node name="Scope" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.12, -0.12)
-rotation = Vector3(1.5707963, 0, 0)
-mesh = SubResource("Mesh_7")
-material_override = SubResource("Mat_accent")
+[node name="StockTop" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.02, 0.18)
+mesh = SubResource("Mesh_16")
+material_override = SubResource("Mat_wood")
+
+[node name="StockBottom" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.06, 0.175)
+mesh = SubResource("Mesh_17")
+material_override = SubResource("Mat_wood")
+
+[node name="CheekRest" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.048, 0.15)
+mesh = SubResource("Mesh_18")
+material_override = SubResource("Mat_wood")
+
+[node name="ButtPlate" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.02, 0.278)
+mesh = SubResource("Mesh_19")
+material_override = SubResource("Mat_dark")
