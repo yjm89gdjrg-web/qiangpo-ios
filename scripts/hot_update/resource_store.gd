@@ -29,7 +29,7 @@ func trusted_url(url: String) -> bool:
 	# Alternate domains must have valid HTTPS certificates and exact path prefixes.
 	if not url.begins_with("https://") or url.contains("..") or url.contains("\\") or url.contains("@") or url.contains("%") or url.contains("#") or url.contains("?"):
 		return false
-	var prefixes: Variant = ProjectSettings.get_setting("hot_update/trusted_url_prefixes", PackedStringArray(["https://raw.githubusercontent.com/ftyhgddjhfd-jpg/qiangpo-ios/master/update/"]))
+	var prefixes: Variant = ProjectSettings.get_setting("hot_update/trusted_url_prefixes", PackedStringArray(["https://hit-appeared-corp-agreed.trycloudflare.com/update/"]))
 	if not (prefixes is Array or prefixes is PackedStringArray):
 		return false
 	for prefix in prefixes:

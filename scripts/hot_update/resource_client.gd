@@ -3,7 +3,7 @@ extends Node
 signal manifest_checked(manifest: Dictionary, error: String)
 signal patch_installed(success: bool, message: String)
 signal download_progress(downloaded: int, total: int)
-const MANIFEST_URL := "https://raw.githubusercontent.com/ftyhgddjhfd-jpg/qiangpo-ios/master/update/resources.json"
+const MANIFEST_URL := "https://hit-appeared-corp-agreed.trycloudflare.com/update/resources.json"
 const Store = preload("res://scripts/hot_update/resource_store.gd")
 var store = Store.new()
 var request: HTTPRequest

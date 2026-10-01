@@ -3,7 +3,7 @@ extends Node
 const Store = preload("res://scripts/hot_update/resource_store.gd")
 const ResourceClient = preload("res://scripts/hot_update/resource_client.gd")
 const CURRENT_VERSION := Store.APP_VERSION
-const MANIFEST_URL := "https://raw.githubusercontent.com/ftyhgddjhfd-jpg/qiangpo-ios/master/update/ShotDawn-update.json"
+const MANIFEST_URL := "https://hit-appeared-corp-agreed.trycloudflare.com/update/ShotDawn-update.json"
 const DOWNLOAD_PATH := "user://ShotDawn-update.ipa"
 var client: Node
 var manifest_request: HTTPRequest

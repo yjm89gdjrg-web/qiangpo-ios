@@ -2,6 +2,7 @@
 """Build a deterministic, non-executable ShotDawn resource ZIP + manifest (no upload)."""
 import argparse
 import hashlib
+import os
 import json
 import math
 import re
@@ -10,6 +11,9 @@ import zipfile
 from pathlib import Path
 
 PREFIX = 'https://raw.githubusercontent.com/ftyhgddjhfd-jpg/qiangpo-ios/master/update/'
+# Release owner may point delivery at an owned valid-certificate HTTPS path.
+# Ends with '/' and is set explicitly when publishing, never widened at runtime.
+EXTRA_PREFIX = os.environ.get('SHOTDAWN_UPDATE_PREFIX', '')
 MAX_FILE = 8 * 1024 * 1024
 
 
@@ -42,7 +46,8 @@ def validate_map(data, names):
 
 
 def build(source, output, url, revision, min_app, max_app, notes=''):
-    if not url.startswith(PREFIX) or any(c in url for c in ('..', '\\', '@', '%', '#', '?')):
+    trusted = [PREFIX] + ([EXTRA_PREFIX] if EXTRA_PREFIX else [])
+    if not any(url.startswith(p) for p in trusted) or any(c in url for c in ('..', '\\', '@', '%', '#', '?')):
         raise ValueError('URL must be the trusted repository raw HTTPS update path')
     def version(s):
         if not re.fullmatch(r'\d{1,3}\.\d{1,3}\.\d{1,3}', s):
