@@ -4,6 +4,7 @@ extends CanvasLayer
 ## 状态文字 + 下包/拆包 + 换枪 + 跳跃 + 开火
 
 var status: Label
+var scoreboard: Label
 var action_button: Button
 var weapon_button: Button
 var jump_button: Button
@@ -22,6 +23,12 @@ var crosshair: Control
 func _ready() -> void:
 	layer = 10
 	status = get_node_or_null("Status") as Label
+	scoreboard = Label.new()
+	scoreboard.name = "Scoreboard"
+	scoreboard.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	scoreboard.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	scoreboard.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(scoreboard)
 	action_button = get_node_or_null("ActionButton") as Button
 	weapon_button = get_node_or_null("WeaponButton") as Button
 	jump_button = get_node_or_null("JumpButton") as Button
@@ -108,6 +115,10 @@ func _layout() -> void:
 		status.position = area.position + Vector2(18, 18)
 		status.size = Vector2(area.size.x * 0.70, area.size.y * 0.16)
 		status.add_theme_font_size_override("font_size", int(clamp(vp.y * 0.035, 18.0, 34.0)))
+	if scoreboard:
+		scoreboard.position = area.position + Vector2(0, 18)
+		scoreboard.size = Vector2(area.size.x, 50)
+		scoreboard.add_theme_font_size_override("font_size", int(clamp(vp.y * 0.04, 20.0, 36.0)))
 	var controls := {"fire": fire_button, "jump": jump_button, "switch": weapon_button, "plant": action_button, "move": move_region}
 	for id in controls:
 		var control: Control = controls[id]
@@ -180,6 +191,12 @@ func _process(_delta: float) -> void:
 		_layout()
 	if status and player and player.has_method("get_hud_text"):
 		status.text = player.get_hud_text()
+	if scoreboard and round_manager:
+		var t: int = round_manager.t_score
+		var ct: int = round_manager.ct_score
+		var r: int = round_manager.round_number
+		var max_r: int = round_manager.MAX_ROUNDS
+		scoreboard.text = "T: %d | CT: %d | 回合: %d/%d" % [t, ct, r, max_r]
 	if action_button and round_manager:
 		action_button.text = "拆包" if round_manager.bomb_planted else "下包"
 

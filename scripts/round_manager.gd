@@ -5,16 +5,22 @@ const PLANT_TIME := 2.5
 const DEFUSE_TIME := 5.0
 const BOMB_TIME := 35.0
 const SITE_RADIUS := 3.2
+const RESULT_DISPLAY_TIME := 3.0
+const MAX_ROUNDS := 13
 
 var phase := "寻找目标点"
 var bomb_planted := false
 var bomb_timer := 0.0
 var action_timer := 0.0
 var result := ""
+var result_timer := 0.0
 var site_name := "A点"
 var site_position := Vector3.ZERO
 var player: Node3D
 var sites: Array[Node3D] = []
+var t_score := 0
+var ct_score := 0
+var round_number := 1
 const Audio = preload("res://scripts/hot_update/audio_manager.gd")
 var sfx = Audio.new()
 
@@ -30,6 +36,9 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if result != "":
+		result_timer += delta
+		if result_timer >= RESULT_DISPLAY_TIME:
+			_next_round()
 		return
 	if action_timer > 0.0:
 		action_timer = max(action_timer - delta, 0.0)
@@ -43,17 +52,21 @@ func _process(delta: float) -> void:
 		action_timer += delta
 		if action_timer >= 0.0:
 			bomb_planted = false
-			result = "防守方胜利！炸弹已拆除"
+			ct_score += 1
+			result = "CT 方胜利！炸弹已拆除 (%d:%d)" % [t_score, ct_score]
 			phase = result
 			sfx.play("switch", -4.0)
+			result_timer = 0.0
 		return
 	if bomb_planted:
 		bomb_timer -= delta
 		phase = "炸弹倒计时 %.1f 秒" % max(bomb_timer, 0.0)
 		if bomb_timer <= 0.0:
-			result = "进攻方胜利！目标已爆炸"
+			t_score += 1
+			result = "T 方胜利！目标已爆炸 (%d:%d)" % [t_score, ct_score]
 			phase = result
 			sfx.play("explode")
+			result_timer = 0.0
 			return
 	if not bomb_planted and player and player.global_position.distance_to(site_position) <= SITE_RADIUS:
 		phase = "在 %s 按 E 下包" % site_name
@@ -95,3 +108,33 @@ func get_status() -> String:
 	if action_timer > 0.0:
 		return "%s | %.1f" % [phase, action_timer]
 	return phase
+
+func _reset_round() -> void:
+	# 重置回合状态
+	bomb_planted = false
+	bomb_timer = 0.0
+	action_timer = 0.0
+	result = ""
+	result_timer = 0.0
+	phase = "前往 %s" % site_name
+	# 重置玩家
+	if player and is_instance_valid(player):
+		player.hp = 100
+		player.position = Vector3(0, 1, 8)  # 玩家出生点
+		player.reset_mobile_input()
+	# 重置所有 bots
+	for bot in get_tree().get_nodes_in_group("bot"):
+		if bot.has_method("reset_for_round"):
+			bot.reset_for_round()
+
+func _next_round() -> void:
+	if round_number >= MAX_ROUNDS:
+		# 游戏结束
+		var winner := "T" if t_score > ct_score else "CT"
+		if t_score == ct_score:
+			winner = "平局"
+		phase = "游戏结束！%s 获胜 (%d:%d)" % [winner, t_score, ct_score]
+		result = phase
+		return
+	round_number += 1
+	_reset_round()

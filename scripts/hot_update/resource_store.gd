@@ -1,6 +1,6 @@
 extends RefCounted
 ## Restricted, non-executable resource ZIPs. Never mount untrusted PCK/scene/script files.
-const APP_VERSION := "1.3.0"
+const APP_VERSION := "1.3.1"
 const ROOT := "user://resource_updates"
 const MAX_ARCHIVE := 32 * 1024 * 1024
 const MAX_FILE := 8 * 1024 * 1024

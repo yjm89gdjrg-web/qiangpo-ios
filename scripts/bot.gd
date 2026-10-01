@@ -28,15 +28,26 @@ var strafe_timer := 0.0
 var stuck_time := 0.0
 var last_pos := Vector3.ZERO
 var obstacles: Array[Node] = []
+var team := "CT"  # 队伍："T" 或 "CT"
+var spawn_pos := Vector3.ZERO
 
 func _ready() -> void:
-	add_to_group("enemy")
+	add_to_group("bot")
+	if team == "CT":
+		add_to_group("enemy")
+	else:
+		add_to_group("friendly")
 	last_pos = global_position
+	spawn_pos = global_position
 	call_deferred("_find_target")
 	call_deferred("_collect_obstacles")
 
 func _find_target() -> void:
-	target = get_tree().get_first_node_in_group("player")
+	# 只攻击敌对队伍
+	var target_group := "player" if team == "CT" else "enemy"
+	var candidates := get_tree().get_nodes_in_group(target_group)
+	if candidates.size() > 0:
+		target = candidates[0]
 
 func _collect_obstacles() -> void:
 	# Blockers are axis-aligned boxes; treat each MeshInstance3D child as a slab.
@@ -214,3 +225,14 @@ func take_damage(amount: int) -> void:
 	hp -= amount
 	if hp <= 0:
 		queue_free()
+
+func reset_for_round() -> void:
+	# 回合重置：恢复血量、回到出生点
+	hp = 100
+	global_position = spawn_pos
+	velocity = Vector3.ZERO
+	fire_timer = 0.0
+	stuck_time = 0.0
+	last_pos = spawn_pos
+	# 重新寻找目标
+	call_deferred("_find_target")
