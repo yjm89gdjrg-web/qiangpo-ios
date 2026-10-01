@@ -40,6 +40,8 @@ var fire_touch_id := -1
 var hud_firing: bool = false
 
 var round_manager: Node
+var move_region := Rect2()
+var mouse_firing := false
 
 @onready var head := $Head
 @onready var camera := $Head/Camera3D
@@ -72,7 +74,35 @@ func _switch_weapon(idx: int) -> void:
 	weapon_idx = idx
 	_apply_weapon()
 
+func reset_mobile_input() -> void:
+	move_touch_id = -1
+	look_touch_id = -1
+	fire_touch_id = -1
+	move_vec = Vector2.ZERO
+	hud_firing = false
+	mouse_firing = false
+
+func _input(event: InputEvent) -> void:
+	# Releases must work even over GUI; only starts belong in unhandled input.
+	if event is InputEventScreenTouch and not event.pressed:
+		if event.index == move_touch_id:
+			move_touch_id = -1
+			move_vec = Vector2.ZERO
+		if event.index == look_touch_id:
+			look_touch_id = -1
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+		mouse_firing = false
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		reset_mobile_input()
+
 func _unhandled_input(event: InputEvent) -> void:
+	if get_tree().paused:
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		mouse_firing = event.pressed
+		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		yaw -= event.relative.x * MOUSE_SENS
 		pitch -= event.relative.y * MOUSE_SENS
@@ -95,7 +125,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var vp: Vector2 = get_viewport().get_visible_rect().size
 		if t.pressed:
 			# 左下 42% 区域 = 移动摇杆
-			if t.position.x < vp.x * 0.42 and t.position.y > vp.y * 0.30 and move_touch_id == -1:
+			if move_region.has_point(t.position) and move_touch_id == -1:
 				move_touch_id = t.index
 				move_origin = t.position
 				move_vec = Vector2.ZERO
@@ -103,9 +133,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif t.position.x > vp.x * 0.55 and look_touch_id == -1:
 				look_touch_id = t.index
 				look_last = t.position
-			# 上半屏两侧 = 开火按钮（不再用转视角当开火）
-			elif t.position.y < vp.y * 0.35 and fire_touch_id == -1:
-				fire_touch_id = t.index
 		else:
 			if t.index == move_touch_id:
 				move_touch_id = -1
@@ -119,9 +146,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if d.index == move_touch_id:
 			var v: Vector2 = d.position - move_origin
 			var m: float = v.length()
-			if m > 60.0:
-				v = v / m * 60.0
-			move_vec = v / 60.0
+			var radius := maxf(20.0, move_region.size.x * 0.3)
+			if m > radius:
+				v = v / m * radius
+			move_vec = v / radius
 		elif d.index == look_touch_id:
 			var rel: Vector2 = d.position - look_last
 			look_last = d.position
@@ -132,6 +160,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			head.rotation.x = pitch
 
 func _physics_process(delta: float) -> void:
+	if get_tree().paused:
+		return
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
 
@@ -159,7 +189,7 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 	fire_timer -= delta
-	var want_fire := (Input.is_action_pressed("shoot") and not OS.has_feature("mobile")) or fire_touch_id != -1 or hud_firing
+	var want_fire := (mouse_firing and not OS.has_feature("mobile")) or hud_firing
 	if want_fire and fire_timer <= 0.0 and ammo > 0 and not reloading:
 		_fire()
 
@@ -167,6 +197,8 @@ func _physics_process(delta: float) -> void:
 	head.rotation.x = pitch + recoil
 
 func _fire() -> void:
+	if get_tree().paused:
+		return
 	var w := _cur()
 	fire_timer = w["rate"]
 	ammo -= 1
@@ -196,7 +228,7 @@ func _reload() -> void:
 	if reloading:
 		return
 	reloading = true
-	await get_tree().create_timer(1.4).timeout
+	await get_tree().create_timer(1.4, false).timeout
 	ammo = _cur()["ammo"]
 	reloading = false
 
@@ -208,7 +240,7 @@ func _spawn_impact(pos: Vector3) -> void:
 	m.mesh = sphere
 	get_tree().current_scene.add_child(m)
 	m.global_position = pos
-	await get_tree().create_timer(0.25).timeout
+	await get_tree().create_timer(0.25, false).timeout
 	m.queue_free()
 
 func take_damage(amount: int) -> void:

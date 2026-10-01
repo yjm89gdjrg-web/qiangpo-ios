@@ -46,9 +46,9 @@ def main():
         data['ground_texture'] = 'textures/grid.png'
         (source / 'maps/main.json').write_text(json.dumps(data))
         url = builder.PREFIX + 'resources-r7.zip'
-        manifest = builder.build(source, output, url, 7, '1.2.2', '1.2.2', 'Test visual patch')
+        manifest = builder.build(source, output, url, 7, '0.0.1', '998.0.0', 'Test visual patch')
         first = (output / 'resources-r7.zip').read_bytes()
-        builder.build(source, output, url, 7, '1.2.2', '1.2.2')
+        builder.build(source, output, url, 7, '0.0.1', '998.0.0')
         assert first == (output / 'resources-r7.zip').read_bytes(), 'builder must be deterministic'
         print('PASS deterministic restricted ZIP builder', flush=True)
         for name in ('script', 'traversal', 'deflate', 'duplicate', 'scene', 'symlink', 'central', 'badmap', 'hugepng', 'truncated'):
@@ -78,7 +78,7 @@ def main():
         # Builder itself rejects script files instead of quietly ignoring them.
         (source / 'evil.gd').write_text('extends Node')
         try:
-            builder.build(source, output, url, 7, '1.2.2', '1.2.2')
+            builder.build(source, output, url, 7, '0.0.1', '998.0.0')
             raise AssertionError('builder accepted executable payload')
         except ValueError:
             print('PASS builder rejects executable payload', flush=True)
@@ -128,7 +128,7 @@ def main():
             for revision in (8, 9):
                 data['label'] = f'Patch {revision}'
                 (source / 'maps/main.json').write_text(json.dumps(data))
-                m = builder.build(source, output, builder.PREFIX + f'resources-r{revision}.zip', revision, '1.2.2', '1.2.2')
+                m = builder.build(source, output, builder.PREFIX + f'resources-r{revision}.zip', revision, '0.0.1', '998.0.0')
                 (output / f'manifest-r{revision}.json').write_text(json.dumps(m))
             run('install_next')
             state = json.loads(active_files[0].read_text())

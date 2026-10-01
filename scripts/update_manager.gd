@@ -20,10 +20,12 @@ var latest_manifest: Dictionary = {}
 var resource_manifest: Dictionary = {}
 var mode := "resource"
 var checking := false
-var input_was_captured := false
-var saved_process_modes: Dictionary = {}
+const Pause = preload("res://scripts/ui/modal_pause.gd")
+var pause_gate: Node
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	pause_gate = Pause.for_scene(get_parent())
 	_build_ui()
 	client = ResourceClient.new()
 	add_child(client)
@@ -47,12 +49,6 @@ func _build_ui() -> void:
 	ui_layer = CanvasLayer.new()
 	ui_layer.layer = 30
 	add_child(ui_layer)
-	var check := Button.new()
-	check.text = "更新"
-	check.position = Vector2(18, 125)
-	check.custom_minimum_size = Vector2(100, 48)
-	check.pressed.connect(_check_for_update)
-	ui_layer.add_child(check)
 	overlay = Control.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -99,31 +95,13 @@ func _show() -> void:
 	if overlay.visible:
 		return
 	overlay.visible = true
-	input_was_captured = Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	# Block gameplay touch input as well as GUI clicks while consenting/downloading.
-	for path in ["Player", "Bots", "RoundManager", "HUD"]:
-		var node := get_parent().get_node_or_null(path)
-		if node:
-			saved_process_modes[path] = node.process_mode
-			node.process_mode = Node.PROCESS_MODE_DISABLED
-	var player := get_parent().get_node_or_null("Player")
-	if player:
-		player.set("hud_firing", false)
-		player.set("move_touch_id", -1)
-		player.set("look_touch_id", -1)
-		player.set("fire_touch_id", -1)
-		player.set("move_vec", Vector2.ZERO)
+	pause_gate.acquire(self)
 
 func _close() -> void:
+	if not overlay.visible:
+		return
 	overlay.visible = false
-	for path in ["Player", "Bots", "RoundManager", "HUD"]:
-		var node := get_parent().get_node_or_null(path)
-		if node:
-			node.process_mode = saved_process_modes.get(path, Node.PROCESS_MODE_INHERIT)
-	saved_process_modes.clear()
-	if input_was_captured:
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	pause_gate.release(self)
 
 func _check_for_update() -> void:
 	if client.busy or checking or download_request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:

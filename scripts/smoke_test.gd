@@ -5,6 +5,7 @@ func _initialize() -> void:
 		push_error("场景加载失败"); quit(1); return
 	var root: Node3D = scene.instantiate() as Node3D
 	get_root().add_child(root)
+	current_scene = root
 	var player: CharacterBody3D = root.get_node_or_null("Player")
 	var bots: Node3D = root.get_node_or_null("Bots")
 	if player == null or bots == null:
@@ -24,4 +25,6 @@ func _initialize() -> void:
 		await process_frame
 	print("   玩家HP=", player.hp, " 击杀=", player.kills)
 	print("✅ 无崩溃")
+	root.queue_free()
+	await process_frame
 	quit(0)

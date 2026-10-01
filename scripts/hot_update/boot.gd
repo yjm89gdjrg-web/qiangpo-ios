@@ -31,19 +31,22 @@ func _ready() -> void:
 	play.custom_minimum_size = Vector2(300, 64)
 	play.pressed.connect(_start)
 	box.add_child(play)
-	var update: Button = Button.new()
-	update.text = "检查更新"
-	update.custom_minimum_size = Vector2(300, 56)
-	box.add_child(update)
 	var manager: Node = Node.new()
+	manager.name = "UpdateManager"
 	manager.set_script(load("res://scripts/update_manager.gd"))
 	add_child(manager)
-	# Reuse validated update UI, hide its floating in-game shortcut here.
-	manager.ui_layer.get_child(0).hide()
-	update.pressed.connect(manager._check_for_update)
+	var settings: CanvasLayer = CanvasLayer.new()
+	settings.set_script(load("res://scripts/ui/settings.gd"))
+	add_child(settings)
+	var settings_button := Button.new()
+	settings_button.name = "SettingsButton"
+	settings_button.text = "设置"
+	settings_button.custom_minimum_size = Vector2(300, 56)
+	box.add_child(settings_button)
+	settings_button.pressed.connect(settings.open)
 
 func _start() -> void:
-	if starting:
+	if starting or get_tree().paused:
 		return
 	starting = true
 	call_deferred("_launch")

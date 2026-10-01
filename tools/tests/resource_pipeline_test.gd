@@ -25,6 +25,10 @@ func require(condition: bool, label: String) -> bool:
 	return true
 
 func run() -> void:
+	# Fixture manifests use the builder repository URL; trust is test-only.
+	ProjectSettings.set_setting("hot_update/trusted_url_prefixes", PackedStringArray([
+		"https://raw.githubusercontent.com/ftyhgddjhfd-jpg/qiangpo-ios/master/update/",
+		"https://hit-appeared-corp-agreed.trycloudflare.com/update/"]))
 	var args := OS.get_cmdline_user_args()
 	var mode := args[0] if args.size() else "download"
 	var store = Store.new()
@@ -34,7 +38,10 @@ func run() -> void:
 		if not require(not store.activate(), "clean user sandbox; built-in resources"):
 			return
 		var boot := load("res://scenes/boot.tscn") as PackedScene
-		root.add_child(boot.instantiate())
+		var home := boot.instantiate()
+		root.add_child(home)
+		current_scene = home
+		home.call("_start")
 		for i in range(8):
 			await process_frame
 		if not require(current_scene.get_meta("active_resource_revision", -1) == 0, "live game starts with built-in map"):
@@ -60,7 +67,10 @@ func run() -> void:
 		return
 	if mode == "boot" or mode == "fallback" or mode == "previous":
 		var boot := load("res://scenes/boot.tscn") as PackedScene
-		root.add_child(boot.instantiate())
+		var home := boot.instantiate()
+		root.add_child(home)
+		current_scene = home
+		home.call("_start")
 		for i in range(8):
 			await process_frame
 		var scene := current_scene as Node3D
@@ -91,13 +101,16 @@ func run() -> void:
 				ui.add_child(local_client)
 				ui.client = local_client
 				ui.call("_check_for_update")
-				if not require(scene.get_node("Player").process_mode == Node.PROCESS_MODE_DISABLED, "consent UI blocks gameplay input"):
+				if not require(paused and not scene.get_node("Player").can_process(), "consent UI blocks gameplay input"):
 					return
 				ui.client.request.cancel_request()
 				ui.call("_close")
-				if not require(scene.get_node("Player").process_mode == Node.PROCESS_MODE_INHERIT, "closing consent UI restores gameplay"):
+				if not require(not paused and scene.get_node("Player").can_process(), "closing consent UI restores gameplay"):
 					return
 				ui.call("_apply_resources")
+				for i in range(8):
+					await process_frame
+				current_scene.call("_start")
 				for i in range(8):
 					await process_frame
 				if not require(current_scene.get_meta("resource_revision", 0) == 7, "reload boot applies patch without restarting executable"):
@@ -112,7 +125,7 @@ func run() -> void:
 			match field:
 				"size": bad.size = int(manifest.size) + 1
 				"sha256": bad.sha256 = "0".repeat(64)
-				"min_app": bad.min_app = "1.2.3"
+				"min_app": bad.min_app = "999.0.0"
 				"max_app": bad.max_app = "1.2.1"
 				"url": bad.url = "https://raw.githubusercontent.com.attacker.test/evil.zip"
 				"format": bad.format = "pck"

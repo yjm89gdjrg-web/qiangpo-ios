@@ -11,6 +11,12 @@ var fire_button: Button
 var player: Node
 var round_manager: Node
 var last_size := Vector2.ZERO
+const Layout = preload("res://scripts/ui/control_layout.gd")
+var layout = Layout.new()
+var settings: CanvasLayer
+var settings_button: Button
+var move_region: Panel
+var fire_pointer := -1
 
 func _ready() -> void:
 	layer = 10
@@ -28,6 +34,32 @@ func _ready() -> void:
 	if fire_button:
 		fire_button.button_down.connect(_on_fire_down)
 		fire_button.button_up.connect(_on_fire_up)
+	move_region = Panel.new()
+	move_region.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.15, 0.25, 0.35, 0.25)
+	style.border_color = Color(0.7, 0.85, 1.0, 0.5)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(200)
+	move_region.add_theme_stylebox_override("panel", style)
+	add_child(move_region)
+	var hint := Label.new()
+	hint.text = "移动"
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	move_region.add_child(hint)
+	settings = CanvasLayer.new()
+	settings.set_script(load("res://scripts/ui/settings.gd"))
+	get_parent().add_child.call_deferred(settings)
+	settings_button = Button.new()
+	settings_button.name = "SettingsButton"
+	settings_button.text = "设置"
+	settings_button.pressed.connect(func(): settings.open())
+	add_child(settings_button)
+	if fire_button:
+		fire_button.gui_input.connect(_fire_input)
 	_layout()
 	call_deferred("_link")
 
@@ -35,40 +67,38 @@ func _link() -> void:
 	var scene := get_tree().current_scene
 	player = scene.get_node_or_null("Player")
 	round_manager = scene.get_node_or_null("RoundManager")
+	_layout()
 
 func _layout() -> void:
 	var vp := get_viewport().get_visible_rect().size
 	if vp.x <= 0 or vp.y <= 0:
 		vp = Vector2(1280, 720)
-	var bw: float = clamp(vp.x * 0.16, 110.0, 190.0)
-	var bh: float = clamp(vp.y * 0.16, 70.0, 120.0)
-	var margin: float = 18.0
-	var right_x: float = vp.x - bw - margin
-
+	layout.load_settings()
 	if status:
 		status.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		status.position = Vector2(margin, margin)
-		status.size = Vector2(vp.x * 0.62, bh * 1.6)
+		status.position = Vector2(18, 18)
+		status.size = Vector2(vp.x * 0.70, vp.y * 0.16)
 		status.add_theme_font_size_override("font_size", int(clamp(vp.y * 0.035, 18.0, 34.0)))
-	if action_button:
-		action_button.size = Vector2(bw, bh)
-		action_button.position = Vector2(right_x, vp.y - bh - margin)
-		action_button.add_theme_font_size_override("font_size", int(clamp(vp.y * 0.03, 16.0, 28.0)))
-	if weapon_button:
-		weapon_button.text = "换枪"
-		weapon_button.size = Vector2(bw, bh)
-		weapon_button.position = Vector2(right_x - bw - margin, vp.y - bh - margin)
-		weapon_button.add_theme_font_size_override("font_size", int(clamp(vp.y * 0.03, 16.0, 28.0)))
-	if jump_button:
-		jump_button.text = "跳跃"
-		jump_button.size = Vector2(bw, bh)
-		jump_button.position = Vector2(right_x, vp.y - bh * 2 - margin * 2)
-		jump_button.add_theme_font_size_override("font_size", int(clamp(vp.y * 0.03, 16.0, 28.0)))
-	if fire_button:
-		fire_button.text = "开火"
-		fire_button.size = Vector2(bw * 1.2, bh * 1.2)
-		fire_button.position = Vector2(right_x - bw * 0.2, vp.y - bh * 3 - margin * 3)
-		fire_button.add_theme_font_size_override("font_size", int(clamp(vp.y * 0.03, 16.0, 28.0)))
+	var controls := {"fire": fire_button, "jump": jump_button, "switch": weapon_button, "plant": action_button, "move": move_region}
+	for id in controls:
+		var control: Control = controls[id]
+		if not control:
+			continue
+		if control is Button:
+			control.clip_text = true
+		var rect: Rect2 = layout.rect_for(id, vp)
+		control.size = rect.size
+		control.position = rect.position
+		control.add_theme_font_size_override("font_size", int(clamp(vp.y * 0.03, 16.0, 28.0)))
+	weapon_button.text = "换枪"
+	jump_button.text = "跳跃"
+	fire_button.text = "开火"
+	move_region.visible = layout.show_joystick
+	settings_button.size = Vector2(90, 44)
+	settings_button.position = Vector2(maxf(0, vp.x - 108), 18)
+	if is_instance_valid(player):
+		player.move_region = layout.rect_for("move", vp)
+		player.reset_mobile_input()
 
 func _process(_delta: float) -> void:
 	var vp := get_viewport().get_visible_rect().size
@@ -81,7 +111,7 @@ func _process(_delta: float) -> void:
 		action_button.text = "拆包" if round_manager.bomb_planted else "下包"
 
 func _on_action() -> void:
-	if not round_manager:
+	if get_tree().paused or not round_manager:
 		return
 	if round_manager.bomb_planted:
 		round_manager.try_defuse()
@@ -89,17 +119,37 @@ func _on_action() -> void:
 		round_manager.try_plant()
 
 func _on_switch() -> void:
-	if player and player.has_method("_switch_weapon"):
+	if not get_tree().paused and player and player.has_method("_switch_weapon"):
 		player.call("_switch_weapon", (player.weapon_idx + 1) % player.WEAPONS.size())
 
 func _on_jump() -> void:
-	if player and player.is_on_floor():
+	if not get_tree().paused and player and player.is_on_floor():
 		player.velocity.y = player.JUMP_VELOCITY
 
 func _on_fire_down() -> void:
-	if is_instance_valid(player):
+	if not get_tree().paused and is_instance_valid(player):
 		player.hud_firing = true
 
 func _on_fire_up() -> void:
 	if is_instance_valid(player):
 		player.hud_firing = false
+
+func _fire_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed and not get_tree().paused:
+			fire_pointer = event.index
+			_on_fire_down()
+		elif event.index == fire_pointer:
+			fire_pointer = -1
+			_on_fire_up()
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and not event.pressed and event.index == fire_pointer:
+		fire_pointer = -1
+		_on_fire_up()
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+		_on_fire_up()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_on_fire_up()
