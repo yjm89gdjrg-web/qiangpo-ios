@@ -1,0 +1,287 @@
+[gd_scene load_steps=32 format=3 uid="uid://bqpsd1x0main"]
+
+[ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
+
+[ext_resource type="PackedScene" path="res://scenes/primitives/player_body.tscn" id="3_body"]
+
+[ext_resource type="Script" path="res://scripts/round_manager.gd" id="7_round"]
+
+[ext_resource type="Script" path="res://scripts/hud.gd" id="9_hud"]
+
+[ext_resource type="Script" path="res://scripts/update_manager.gd" id="8_update"]
+
+[ext_resource type="PackedScene" uid="uid://cqpsd2y0enemy" path="res://scenes/enemy.tscn" id="2_enemy"]
+
+[ext_resource type="PackedScene" path="res://scenes/primitives/ak47.tscn" id="g0"]
+
+[ext_resource type="PackedScene" path="res://scenes/primitives/m4.tscn" id="g1"]
+
+[ext_resource type="PackedScene" path="res://scenes/primitives/dragunov.tscn" id="g2"]
+
+[ext_resource type="PackedScene" path="res://scenes/primitives/mosin9130.tscn" id="g3"]
+
+[ext_resource type="PackedScene" path="res://scenes/primitives/l85.tscn" id="g4"]
+
+[ext_resource type="PackedScene" path="res://scenes/primitives/g3a3.tscn" id="g5"]
+
+[ext_resource type="PackedScene" path="res://scenes/primitives/m1911.tscn" id="g6"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(120, 120)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.24, 0.25, 0.23, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
+size = Vector3(120, 0.2, 120)
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
+sky_horizon_color = Color(0.55, 0.62, 0.72, 1)
+sky_top_color = Color(0.25, 0.42, 0.72, 1)
+
+[sub_resource type="Sky" id="Sky_sky"]
+sky_material = SubResource("ProceduralSkyMaterial_sky")
+
+[sub_resource type="Environment" id="Environment_env"]
+background_mode = 2
+sky = SubResource("Sky_sky")
+ambient_light_source = 3
+ambient_light_sky_contribution = 1.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_site"]
+top_radius = 3.0
+bottom_radius = 3.0
+height = 0.06
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_site"]
+albedo_color = Color(0.95, 0.55, 0.12, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_ns"]
+size = Vector3(120, 4, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_ns"]
+size = Vector3(120, 4, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_ew"]
+size = Vector3(1, 4, 120)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_ew"]
+size = Vector3(1, 4, 120)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
+albedo_color = Color(0.42, 0.40, 0.38, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_cover"]
+size = Vector3(4, 2, 4)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_cover"]
+size = Vector3(4, 2, 4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cover"]
+albedo_color = Color(0.34, 0.36, 0.34, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_grid"]
+albedo_color = Color(0.22, 0.23, 0.21, 1)
+uv1_scale = Vector3(20, 20, 1)
+
+[node name="Main" type="Node3D"]
+
+[node name="RoundManager" type="Node" parent="."]
+script = ExtResource("7_round")
+
+[node name="BombSiteA" type="Node3D" parent="." groups=["bomb_site"]]
+position = Vector3(0, 0.035, -14)
+metadata/site_name = "A点"
+
+[node name="Marker" type="MeshInstance3D" parent="BombSiteA"]
+mesh = SubResource("CylinderMesh_site")
+surface_material_override/0 = SubResource("StandardMaterial3D_site")
+
+[node name="Ground" type="StaticBody3D" parent="."]
+
+[node name="Mesh" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+position = Vector3(0, -0.1, 0)
+shape = SubResource("BoxShape3D_ground")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -0.7, 0.7, 0, -0.7, -0.7, 0, 10, 0)
+light_energy = 1.2
+
+[node name="Player" type="CharacterBody3D" parent="." groups=["player"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+script = ExtResource("1_player")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_player")
+
+[node name="Body" parent="Player" instance=ExtResource("3_body")]
+visible = false
+
+[node name="Head" type="Node3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Player/Head"]
+current = true
+
+[node name="WeaponRoot" type="Node3D" parent="Player/Head/Camera3D"]
+
+[node name="ak47" parent="Player/Head/Camera3D/WeaponRoot" instance=ExtResource("g0")]
+position = Vector3(0.25, -0.22, -0.45)
+
+[node name="m4" parent="Player/Head/Camera3D/WeaponRoot" instance=ExtResource("g1")]
+position = Vector3(0.25, -0.22, -0.45)
+
+[node name="dragunov" parent="Player/Head/Camera3D/WeaponRoot" instance=ExtResource("g2")]
+position = Vector3(0.25, -0.22, -0.45)
+
+[node name="mosin9130" parent="Player/Head/Camera3D/WeaponRoot" instance=ExtResource("g3")]
+position = Vector3(0.25, -0.22, -0.45)
+
+[node name="l85" parent="Player/Head/Camera3D/WeaponRoot" instance=ExtResource("g4")]
+position = Vector3(0.25, -0.22, -0.45)
+
+[node name="g3a3" parent="Player/Head/Camera3D/WeaponRoot" instance=ExtResource("g5")]
+position = Vector3(0.25, -0.22, -0.45)
+
+[node name="m1911" parent="Player/Head/Camera3D/WeaponRoot" instance=ExtResource("g6")]
+position = Vector3(0.25, -0.22, -0.45)
+
+[node name="Bots" type="Node3D" parent="."]
+
+[node name="Bot1" parent="Bots" instance=ExtResource("2_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 1, -14)
+
+[node name="Bot2" parent="Bots" instance=ExtResource("2_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 1, -18)
+
+[node name="Bot3" parent="Bots" instance=ExtResource("2_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 1, 10)
+
+[node name="UpdateManager" type="Node" parent="."]
+script = ExtResource("8_update")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("9_hud")
+
+[node name="Status" type="Label" parent="HUD"]
+
+[node name="ActionButton" type="Button" parent="HUD"]
+
+[node name="WeaponButton" type="Button" parent="HUD"]
+
+[node name="FireButton" type="Button" parent="HUD"]
+
+[node name="JumpButton" type="Button" parent="HUD"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_env")
+
+[node name="WallN" type="StaticBody3D" parent="."]
+
+[node name="Mesh" type="MeshInstance3D" parent="WallN"]
+position = Vector3(0, 2, -60)
+mesh = SubResource("BoxMesh_wall_ns")
+surface_material_override/0 = SubResource("StandardMaterial3D_wall")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallN"]
+position = Vector3(0, 2, -60)
+shape = SubResource("BoxShape3D_wall_ns")
+
+[node name="WallS" type="StaticBody3D" parent="."]
+
+[node name="Mesh" type="MeshInstance3D" parent="WallS"]
+position = Vector3(0, 2, 60)
+mesh = SubResource("BoxMesh_wall_ns")
+surface_material_override/0 = SubResource("StandardMaterial3D_wall")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallS"]
+position = Vector3(0, 2, 60)
+shape = SubResource("BoxShape3D_wall_ns")
+
+[node name="WallE" type="StaticBody3D" parent="."]
+
+[node name="Mesh" type="MeshInstance3D" parent="WallE"]
+position = Vector3(60, 2, 0)
+mesh = SubResource("BoxMesh_wall_ew")
+surface_material_override/0 = SubResource("StandardMaterial3D_wall")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallE"]
+position = Vector3(60, 2, 0)
+shape = SubResource("BoxShape3D_wall_ew")
+
+[node name="WallW" type="StaticBody3D" parent="."]
+
+[node name="Mesh" type="MeshInstance3D" parent="WallW"]
+position = Vector3(-60, 2, 0)
+mesh = SubResource("BoxMesh_wall_ew")
+surface_material_override/0 = SubResource("StandardMaterial3D_wall")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallW"]
+position = Vector3(-60, 2, 0)
+shape = SubResource("BoxShape3D_wall_ew")
+
+[node name="Covers" type="Node3D" parent="."]
+
+[node name="Cover1" type="StaticBody3D" parent="Covers"]
+
+[node name="Mesh" type="MeshInstance3D" parent="Covers/Cover1"]
+position = Vector3(10, 1, -6)
+mesh = SubResource("BoxMesh_cover")
+surface_material_override/0 = SubResource("StandardMaterial3D_cover")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Covers/Cover1"]
+position = Vector3(10, 1, -6)
+shape = SubResource("BoxShape3D_cover")
+
+[node name="Cover2" type="StaticBody3D" parent="Covers"]
+
+[node name="Mesh" type="MeshInstance3D" parent="Covers/Cover2"]
+position = Vector3(-12, 1, -18)
+mesh = SubResource("BoxMesh_cover")
+surface_material_override/0 = SubResource("StandardMaterial3D_cover")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Covers/Cover2"]
+position = Vector3(-12, 1, -18)
+shape = SubResource("BoxShape3D_cover")
+
+[node name="Cover3" type="StaticBody3D" parent="Covers"]
+
+[node name="Mesh" type="MeshInstance3D" parent="Covers/Cover3"]
+position = Vector3(4, 1, -22)
+mesh = SubResource("BoxMesh_cover")
+surface_material_override/0 = SubResource("StandardMaterial3D_cover")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Covers/Cover3"]
+position = Vector3(4, 1, -22)
+shape = SubResource("BoxShape3D_cover")
+
+[node name="Cover4" type="StaticBody3D" parent="Covers"]
+
+[node name="Mesh" type="MeshInstance3D" parent="Covers/Cover4"]
+position = Vector3(-8, 1, 4)
+mesh = SubResource("BoxMesh_cover")
+surface_material_override/0 = SubResource("StandardMaterial3D_cover")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Covers/Cover4"]
+position = Vector3(-8, 1, 4)
+shape = SubResource("BoxShape3D_cover")
+
+[node name="Fill" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+light_energy = 0.6
+omni_range = 40
+
+[node name="SiteLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, -14)
+light_energy = 0.8
+omni_range = 25
+light_color = Color(1, 0.72, 0.35, 1)

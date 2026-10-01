@@ -1,0 +1,95 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_15.4.app
+          xcodebuild -version
+
+      - name: Install Godot
+        run: |
+          curl -L -o godot.zip "https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_macos.universal.zip"
+          unzip -q godot.zip
+          mv Godot.app /Applications/Godot.app
+          ln -sf /Applications/Godot.app/Contents/MacOS/Godot /usr/local/bin/godot
+          godot --version
+
+      - name: Install iOS export templates
+        run: |
+          curl -L -o templates.tpz "https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz"
+          mkdir -p ~/Library/Application\ Support/Godot/export_templates/4.4.1.stable
+          unzip -q templates.tpz
+          mv templates/* ~/Library/Application\ Support/Godot/export_templates/4.4.1.stable/
+          ls ~/Library/Application\ Support/Godot/export_templates/4.4.1.stable/ | head
+
+      - name: Export Xcode project
+        run: |
+          mkdir -p build
+          echo "=== Godot 版本 ==="
+          godot --version || true
+          echo "=== 模板目录 ==="
+          ls -la ~/Library/Application\ Support/Godot/export_templates/4.4.1.stable/ || true
+          # 先导出 Xcode 工程（避免直接导出 ipa 时的签名问题）
+          echo "=== 开始导出 ==="
+          godot --headless --path . --export-release "iOS" build/ShotDawn.xcodeproj
+          echo "=== 导出完成，退出码 $? ==="
+          echo "--- build 目录 ---"
+          ls -la build/
+          if [ ! -e build/ShotDawn.xcodeproj ] && [ ! -e build/ShotDawn.ipa ]; then
+            echo "❌ 导出失败：没有生成 xcodeproj 或 ipa"
+            exit 1
+          fi
+
+      - name: Build unsigned IPA
+        run: |
+          set -o pipefail
+          cd build
+          ls -la
+          if [ -d ShotDawn.xcodeproj ]; then
+            xcodebuild -project ShotDawn.xcodeproj \
+              -scheme ShotDawn \
+              -configuration Release \
+              -destination generic/platform=iOS \
+              -archivePath ShotDawn.xcarchive \
+              archive \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGN_STYLE=Manual \
+              PROVISIONING_PROFILE="" \
+              PROVISIONING_PROFILE_SPECIFIER="" \
+              DEVELOPMENT_TEAM="" 2>&1 | tail -25
+
+            # 从 xcarchive 打包成 ipa
+            mkdir -p Payload
+            cp -r ShotDawn.xcarchive/Products/Applications/*.app Payload/
+            zip -qr ShotDawn.ipa Payload
+            echo "✅ IPA 打包完成"
+          else
+            # Godot 可能直接生成了 ipa
+            ls -la
+          fi
+
+      - name: Preserve IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShotDawn-unsigned
+          path: build/*.ipa
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Summary
+        run: |
+          echo "### 构建结果" >> $GITHUB_STEP_SUMMARY
+          ls -lh build/*.ipa 2>/dev/null || echo "未找到 ipa" >> $GITHUB_STEP_SUMMARY

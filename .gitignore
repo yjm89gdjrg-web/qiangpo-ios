@@ -1,0 +1,5 @@
+.godot/
+build/
+*.import
+__pycache__/
+*.png

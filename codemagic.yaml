@@ -1,0 +1,52 @@
+workflows:
+  ios-unsigned:
+    name: ShotDawn iOS 未签名 IPA
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      xcode: latest
+      vars:
+        GODOT_VERSION: "4.4.1"
+    scripts:
+      - name: 安装 Godot
+        script: |
+          curl -L -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
+          unzip -q godot.zip
+          mv Godot.app /Applications/Godot.app
+          ln -sf /Applications/Godot.app/Contents/MacOS/Godot /usr/local/bin/godot
+          godot --version
+      - name: 安装 iOS 导出模板
+        script: |
+          curl -L -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          mkdir -p "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          unzip -q templates.tpz
+          mv templates/* "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable/"
+          ls "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable/" | head
+      - name: 导出 Xcode 工程
+        script: |
+          mkdir -p build
+          godot --headless --path . --export-release "iOS" build/ShotDawn.xcodeproj
+          ls -la build/
+      - name: 打包未签名 IPA
+        script: |
+          cd build
+          xcodebuild -project ShotDawn.xcodeproj \
+            -scheme ShotDawn \
+            -configuration Release \
+            -destination generic/platform=iOS \
+            -archivePath ShotDawn.xcarchive \
+            archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            DEVELOPMENT_TEAM=""
+          mkdir -p Payload
+          cp -r ShotDawn.xcarchive/Products/Applications/*.app Payload/
+          zip -qr ShotDawn.ipa Payload
+          ls -lh ShotDawn.ipa
+    artifacts:
+      - build/*.ipa
+      - build/ShotDawn.xcarchive
