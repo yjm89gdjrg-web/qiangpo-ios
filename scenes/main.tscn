@@ -1,4 +1,14 @@
-[gd_scene load_steps=82 format=3 uid="uid://bqpsd1x0main"]
+[gd_scene load_steps=91 format=3 uid="uid://bqpsd1x0main"]
+
+[ext_resource type="Texture2D" path="res://textures/asphalt_albedo.png" id="tex_asphalt_albedo"]
+[ext_resource type="Texture2D" path="res://textures/asphalt_normal.png" id="tex_asphalt_normal"]
+[ext_resource type="Texture2D" path="res://textures/asphalt_rough.png" id="tex_asphalt_rough"]
+[ext_resource type="Texture2D" path="res://textures/concrete_albedo.png" id="tex_concrete_albedo"]
+[ext_resource type="Texture2D" path="res://textures/concrete_normal.png" id="tex_concrete_normal"]
+[ext_resource type="Texture2D" path="res://textures/concrete_rough.png" id="tex_concrete_rough"]
+[ext_resource type="Texture2D" path="res://textures/crate_albedo.png" id="tex_crate_albedo"]
+[ext_resource type="Texture2D" path="res://textures/crate_normal.png" id="tex_crate_normal"]
+[ext_resource type="Texture2D" path="res://textures/crate_rough.png" id="tex_crate_rough"]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 
@@ -30,8 +40,11 @@
 size = Vector2(120, 120)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
-albedo_color = Color(0.24, 0.25, 0.23, 1)
-
+albedo_texture = ExtResource("tex_asphalt_albedo")
+normal_enabled = true
+normal_texture = ExtResource("tex_asphalt_normal")
+roughness_texture = ExtResource("tex_asphalt_rough")
+uv1_scale = Vector3(20, 20, 1)
 [sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
 size = Vector3(120, 0.2, 120)
 
@@ -61,8 +74,11 @@ height = 0.06
 albedo_color = Color(0.95, 0.55, 0.12, 1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
-albedo_color = Color(0.42, 0.40, 0.38, 1)
-
+albedo_texture = ExtResource("tex_concrete_albedo")
+normal_enabled = true
+normal_texture = ExtResource("tex_concrete_normal")
+roughness_texture = ExtResource("tex_concrete_rough")
+uv1_scale = Vector3(4, 4, 1)
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cover"]
 albedo_color = Color(0.34, 0.36, 0.34, 1)
 
@@ -71,9 +87,11 @@ albedo_color = Color(0.22, 0.23, 0.21, 1)
 uv1_scale = Vector3(20, 20, 1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
-albedo_color = Color(0.46, 0.44, 0.41, 1)
-roughness = 0.85
-
+albedo_texture = ExtResource("tex_concrete_albedo")
+normal_enabled = true
+normal_texture = ExtResource("tex_concrete_normal")
+roughness_texture = ExtResource("tex_concrete_rough")
+uv1_scale = Vector3(4, 4, 1)
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_struct"]
 albedo_color = Color(0.38, 0.37, 0.35, 1)
 roughness = 0.8
@@ -83,9 +101,11 @@ albedo_color = Color(0.34, 0.36, 0.34, 1)
 roughness = 0.75
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_crate"]
-albedo_color = Color(0.55, 0.40, 0.22, 1)
-roughness = 0.9
-
+albedo_texture = ExtResource("tex_crate_albedo")
+normal_enabled = true
+normal_texture = ExtResource("tex_crate_normal")
+roughness_texture = ExtResource("tex_crate_rough")
+uv1_scale = Vector3(1, 1, 1)
 [sub_resource type="BoxMesh" id="BoxMesh_walln"]
 size = Vector3(60, 4, 1)
 
