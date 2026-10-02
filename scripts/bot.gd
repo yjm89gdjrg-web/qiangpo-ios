@@ -29,6 +29,7 @@ var path: Array[Vector3] = []
 var path_timer := 0.0
 var team := "CT"  # 队伍："T" 或 "CT"
 var spawn_pos := Vector3.ZERO
+var anim: AnimationPlayer = null
 const FX = preload("res://scripts/fx.gd")
 
 func _ready() -> void:
@@ -41,6 +42,43 @@ func _ready() -> void:
 	spawn_pos = global_position
 	call_deferred("_find_target")
 	call_deferred("_collect_obstacles")
+	call_deferred("_setup_model")
+
+func _setup_model() -> void:
+	# 用真实士兵模型替代胶囊体：设置动画 + 按队伍染色
+	var body: Node = get_node_or_null("Body")
+	if body == null:
+		return
+	anim = _find_anim_player(body)
+	if anim != null:
+		anim.play("Idle")
+	var tint := Color(1.0, 0.30, 0.26) if team == "CT" else Color(0.42, 0.66, 1.0)
+	_tint_meshes(body, tint)
+
+func _find_anim_player(node: Node) -> AnimationPlayer:
+	if node is AnimationPlayer:
+		return node as AnimationPlayer
+	for c in node.get_children():
+		var r: AnimationPlayer = _find_anim_player(c)
+		if r != null:
+			return r
+	return null
+
+func _tint_meshes(node: Node, tint: Color) -> void:
+	for n in node.find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		var mesh: Mesh = mi.mesh
+		if mesh == null:
+			continue
+		for s in range(mesh.get_surface_count()):
+			var src: Material = mesh.surface_get_material(s)
+			var mat: StandardMaterial3D
+			if src is StandardMaterial3D:
+				mat = (src as StandardMaterial3D).duplicate() as StandardMaterial3D
+			else:
+				mat = StandardMaterial3D.new()
+			mat.albedo_color = mat.albedo_color.lerp(Color(tint.r, tint.g, tint.b, mat.albedo_color.a), 0.62)
+			mi.set_surface_override_material(s, mat)
 
 func _find_target() -> void:
 	# 只攻击敌对队伍
@@ -207,6 +245,15 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 	_track_stuck(delta)
+	_update_anim()
+
+func _update_anim() -> void:
+	if anim == null:
+		return
+	var planar := Vector2(velocity.x, velocity.z).length()
+	var want := "Run" if planar > 0.6 else "Idle"
+	if anim.current_animation != want and anim.has_animation(want):
+		anim.play(want, 0.2)
 
 func _clear_line(from: Vector3, to: Vector3) -> bool:
 	var steps: int = int(from.distance_to(to) / 1.5)

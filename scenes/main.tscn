@@ -40,6 +40,7 @@
 size = Vector2(120, 120)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.46, 0.46, 0.46, 1)
 albedo_texture = ExtResource("tex_asphalt_albedo")
 normal_enabled = true
 normal_texture = ExtResource("tex_asphalt_normal")
@@ -67,10 +68,10 @@ background_mode = 2
 sky = SubResource("Sky_sky")
 ambient_light_source = 3
 ambient_light_sky_contribution = 1.0
-ambient_light_energy = 0.75
+ambient_light_energy = 0.5
 tonemap_mode = 2
-tonemap_white = 2.2
-tonemap_exposure = 1.05
+tonemap_white = 2.6
+tonemap_exposure = 0.95
 fog_enabled = true
 fog_light_color = Color(0.68, 0.72, 0.78, 1)
 fog_density = 0.0035
@@ -365,8 +366,8 @@ shape = SubResource("BoxShape3D_ground")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -0.7, 0.7, 0, -0.7, -0.7, 0, 10, 0)
-light_energy = 1.25
-light_color = Color(1, 0.98, 0.94, 1)
+light_energy = 1.05
+light_color = Color(1, 0.97, 0.92, 1)
 shadow_enabled = true
 directional_shadow_max_distance = 80.0
 shadow_bias = 0.03
