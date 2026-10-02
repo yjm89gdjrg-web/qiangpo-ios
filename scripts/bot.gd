@@ -8,16 +8,12 @@ const CHASE_RANGE = 40.0
 const ATTACK_RANGE = 22.0
 const FIRE_RATE = 0.85
 const DAMAGE = 9
-const PROBE := 1.6
+const PROBE := 1.4
 const AVOID_GROUPS := ["Structures", "Covers", "Props"]
-## Corridor centres; bots route via the nearest one instead of grinding into blocks.
-const WAYPOINTS := [
-	Vector3(-21, 1, 20), Vector3(-21, 1, 8), Vector3(-21, 1, -6),
-	Vector3(-21, 1, -18), Vector3(-18, 1, -24),
-	Vector3(21, 1, 20), Vector3(21, 1, 8), Vector3(21, 1, -6),
-	Vector3(21, 1, -18), Vector3(18, 1, -24),
-	Vector3(0, 1, 26), Vector3(0, 1, 14), Vector3(0, 1, -22)
-]
+## 网格 A* 寻路（确定性，避免在掩体后抖动）
+const GRID_MIN := -31.0
+const GRID_CELL := 2.0
+const GRID_N := 31
 
 var hp := 100
 var fire_timer := 0.0
@@ -28,8 +24,12 @@ var strafe_timer := 0.0
 var stuck_time := 0.0
 var last_pos := Vector3.ZERO
 var obstacles: Array[Node] = []
+var blocked_cells: PackedByteArray = PackedByteArray()
+var path: Array[Vector3] = []
+var path_timer := 0.0
 var team := "CT"  # 队伍："T" 或 "CT"
 var spawn_pos := Vector3.ZERO
+const FX = preload("res://scripts/fx.gd")
 
 func _ready() -> void:
 	add_to_group("bot")
@@ -74,6 +74,87 @@ func _collect_obstacles() -> void:
 		var mesh2: MeshInstance3D = wall.get_node_or_null("Mesh") as MeshInstance3D
 		if mesh2 != null:
 			obstacles.append(mesh2)
+	_build_blocked_grid()
+
+func _build_blocked_grid() -> void:
+	blocked_cells = PackedByteArray()
+	blocked_cells.resize(GRID_N * GRID_N)
+	for cz in range(GRID_N):
+		for cx in range(GRID_N):
+			var p := _center_of(Vector2i(cx, cz))
+			blocked_cells[cz * GRID_N + cx] = 1 if _blocked_at(p) else 0
+
+func _cell_of(p: Vector3) -> Vector2i:
+	var cx := int(floor((p.x - GRID_MIN) / GRID_CELL))
+	var cz := int(floor((p.z - GRID_MIN) / GRID_CELL))
+	return Vector2i(clampi(cx, 0, GRID_N - 1), clampi(cz, 0, GRID_N - 1))
+
+func _center_of(c: Vector2i) -> Vector3:
+	return Vector3(GRID_MIN + (float(c.x) + 0.5) * GRID_CELL, 1.0, GRID_MIN + (float(c.y) + 0.5) * GRID_CELL)
+
+func _cell_blocked(c: Vector2i) -> bool:
+	if c.x < 0 or c.y < 0 or c.x >= GRID_N or c.y >= GRID_N:
+		return true
+	if blocked_cells.size() != GRID_N * GRID_N:
+		return _blocked_at(_center_of(c))
+	return blocked_cells[c.y * GRID_N + c.x] == 1
+
+func _compute_path(from: Vector3, to: Vector3) -> Array[Vector3]:
+	var start := _cell_of(from)
+	var goal := _cell_of(to)
+	var pts: Array[Vector3] = []
+	if start == goal:
+		pts.append(to)
+		return pts
+	var dirs := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
+		Vector2i(1, 1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(-1, -1)]
+	var open: Array[Vector2i] = [start]
+	var came: Dictionary = {}
+	var g: Dictionary = {start: 0.0}
+	var f: Dictionary = {start: 0.0}
+	var closed: Dictionary = {}
+	var guard := 0
+	while not open.is_empty() and guard < 4000:
+		guard += 1
+		var best_i := 0
+		for i in range(open.size()):
+			if float(f.get(open[i], INF)) < float(f.get(open[best_i], INF)):
+				best_i = i
+		var cur: Vector2i = open[best_i]
+		open.remove_at(best_i)
+		if cur == goal:
+			break
+		closed[cur] = true
+		for d in dirs:
+			var nb: Vector2i = cur + d
+			if nb.x < 0 or nb.y < 0 or nb.x >= GRID_N or nb.y >= GRID_N:
+				continue
+			if closed.has(nb) or _cell_blocked(nb):
+				continue
+			if d.x != 0 and d.y != 0:
+				if _cell_blocked(Vector2i(cur.x + d.x, cur.y)) or _cell_blocked(Vector2i(cur.x, cur.y + d.y)):
+					continue
+			var step := 1.41421 if (d.x != 0 and d.y != 0) else 1.0
+			var ng: float = float(g.get(cur, INF)) + step
+			if ng < float(g.get(nb, INF)):
+				g[nb] = ng
+				came[nb] = cur
+				f[nb] = ng + Vector2(float(nb.x - goal.x), float(nb.y - goal.y)).length()
+				if not open.has(nb):
+					open.append(nb)
+	if not came.has(goal):
+		return pts
+	var cells: Array[Vector2i] = []
+	var c: Vector2i = goal
+	var guard2 := 0
+	while c != start and came.has(c) and guard2 < 2000:
+		cells.append(c)
+		c = came[c]
+		guard2 += 1
+	cells.reverse()
+	for cell in cells:
+		pts.append(_center_of(cell))
+	return pts
 
 func _physics_process(delta: float) -> void:
 	if not target or not is_instance_valid(target):
@@ -85,13 +166,10 @@ func _physics_process(delta: float) -> void:
 	var to_player: Vector3 = target.global_position - global_position
 	to_player.y = 0.0
 	var dist: float = to_player.length()
+	var line_clear: bool = _clear_line(global_position, target.global_position)
 
-	strafe_timer -= delta
-	if strafe_timer <= 0.0:
-		strafe_timer = 1.2 + randf() * 1.2
-		strafe = 1.0 if randf() < 0.5 else -1.0
-
-	if dist < ATTACK_RANGE:
+	path_timer -= delta
+	if dist < ATTACK_RANGE and line_clear:
 		velocity.x = move_toward(velocity.x, 0, SPEED)
 		velocity.z = move_toward(velocity.z, 0, SPEED)
 		_face_target()
@@ -99,53 +177,36 @@ func _physics_process(delta: float) -> void:
 		if fire_timer <= 0.0:
 			fire_timer = FIRE_RATE
 			_shoot_at_player()
-	elif dist < CHASE_RANGE:
-		var dir: Vector3 = to_player.normalized()
-		var move := _avoid(dir)
-		velocity.x = move.x * SPEED
-		velocity.z = move.z * SPEED
-		_face_target()
 	else:
-		var waypoint := _next_waypoint()
-		if waypoint != Vector3.ZERO:
-			var wdir: Vector3 = waypoint - global_position
-			wdir.y = 0.0
-			if wdir.length() > 1.2:
-				var wmove := _avoid(wdir.normalized())
-				velocity.x = wmove.x * SPEED
-				velocity.z = wmove.z * SPEED
-				_face_direction(wmove)
-				move_and_slide()
-				_track_stuck(delta)
-				return
-		velocity.x = move_toward(velocity.x, 0, SPEED)
-		velocity.z = move_toward(velocity.z, 0, SPEED)
+		# Route around geometry with grid A* when the direct line is blocked.
+		var dest: Vector3 = target.global_position
+		if not line_clear:
+			if path_timer <= 0.0 or path.is_empty():
+				path = _compute_path(global_position, target.global_position)
+				path_timer = 0.5
+			while path.size() > 0 and global_position.distance_to(path[0]) < 1.5:
+				path.pop_front()
+			if path.size() > 0:
+				dest = path[0]
+		var ddir: Vector3 = dest - global_position
+		ddir.y = 0.0
+		if ddir.length() > 0.6:
+			var move: Vector3 = ddir.normalized()
+			velocity.x = move.x * SPEED
+			velocity.z = move.z * SPEED
+			_face_direction(move)
+		else:
+			velocity.x = move_toward(velocity.x, 0, SPEED)
+			velocity.z = move_toward(velocity.z, 0, SPEED)
+		if line_clear:
+			_face_target()
+		fire_timer -= delta
+		if dist < ATTACK_RANGE and line_clear and fire_timer <= 0.0:
+			fire_timer = FIRE_RATE
+			_shoot_at_player()
 
 	move_and_slide()
 	_track_stuck(delta)
-
-func _next_waypoint() -> Vector3:
-	if not target or not is_instance_valid(target):
-		return Vector3.ZERO
-	var goal: Vector3 = target.global_position
-	# If the straight line is already clear, just go straight - never detour.
-	if _clear_line(global_position, goal):
-		return Vector3.ZERO
-	var best := Vector3.ZERO
-	var best_cost := INF
-	var direct: float = global_position.distance_to(goal)
-	for wp in WAYPOINTS:
-		var to_bot: float = global_position.distance_to(wp)
-		var to_goal: float = wp.distance_to(goal)
-		if to_bot < 2.0 or to_goal >= direct - 1.0:
-			continue
-		if not _clear_line(global_position, wp):
-			continue
-		var cost: float = to_bot + to_goal
-		if cost < best_cost:
-			best_cost = cost
-			best = wp
-	return best
 
 func _clear_line(from: Vector3, to: Vector3) -> bool:
 	var steps: int = int(from.distance_to(to) / 1.5)
@@ -159,7 +220,7 @@ func _clear_line(from: Vector3, to: Vector3) -> bool:
 				continue
 			var half: Vector3 = _half_extents(mesh)
 			var center: Vector3 = mesh.global_position
-			if abs(point.x - center.x) < half.x + 0.8 and abs(point.z - center.z) < half.z + 0.8:
+			if abs(point.x - center.x) < half.x + 0.5 and abs(point.z - center.z) < half.z + 0.5:
 				return false
 	return true
 
@@ -174,35 +235,37 @@ func _track_stuck(delta: float) -> void:
 		stuck_time += delta
 	else:
 		stuck_time = 0.0
-	if stuck_time > 0.7:
-		strafe = -strafe
-		strafe_timer = 1.5
+	if stuck_time > 1.5:
+		# Stuck: force a fresh path on the next frame.
+		path.clear()
+		path_timer = 0.0
 		stuck_time = 0.0
 
-func _avoid(dir: Vector3) -> Vector3:
-	# If a blocker sits ahead, slide sideways along the clearer side.
+func _avoid(dir: Vector3, goal: Vector3 = Vector3.ZERO) -> Vector3:
+	# If a blocker sits ahead, slide along the side that still makes progress.
 	var ahead := global_position + dir * PROBE
-	var blocked := false
+	if not _blocked_at(ahead):
+		return dir
+	var side := Vector3(-dir.z, 0, dir.x)
+	var left_free: bool = not _blocked_at(global_position + side * PROBE)
+	var right_free: bool = not _blocked_at(global_position - side * PROBE)
+	if left_free and not right_free:
+		return side.normalized()
+	if right_free and not left_free:
+		return (-side).normalized()
+	# Both sides open: commit to one consistent side so the bot walks around
+	# the blocker instead of oscillating in front of it.
+	return side.normalized()
+
+func _blocked_at(point: Vector3) -> bool:
 	for mesh in obstacles:
 		if not is_instance_valid(mesh):
 			continue
 		var half: Vector3 = _half_extents(mesh)
 		var center: Vector3 = mesh.global_position
-		if abs(ahead.x - center.x) < half.x + 0.6 and abs(ahead.z - center.z) < half.z + 0.6:
-			blocked = true
-			break
-	if not blocked:
-		return dir
-	var side := Vector3(-dir.z, 0, dir.x) * strafe
-	var probe_side := global_position + side * PROBE
-	for mesh2 in obstacles:
-		if not is_instance_valid(mesh2):
-			continue
-		var h2: Vector3 = _half_extents(mesh2)
-		var c2: Vector3 = mesh2.global_position
-		if abs(probe_side.x - c2.x) < h2.x + 0.6 and abs(probe_side.z - c2.z) < h2.z + 0.6:
-			return (side * -1.0).normalized()
-	return side.normalized()
+		if abs(point.x - center.x) < half.x + 0.5 and abs(point.z - center.z) < half.z + 0.5:
+			return true
+	return false
 
 func _half_extents(mesh: MeshInstance3D) -> Vector3:
 	var aabb: AABB = mesh.get_aabb()
@@ -218,8 +281,12 @@ func _shoot_at_player() -> void:
 	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(origin, destination)
 	query.exclude = [get_rid()]
 	var hit: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
-	if not hit.is_empty() and hit.get("collider") == target and target.has_method("take_damage"):
-		target.take_damage(DAMAGE)
+	var muzzle: Vector3 = global_position + Vector3(0, 1.35, 0) - global_transform.basis.z * 0.4
+	FX.muzzle_flash(self, muzzle, (destination - muzzle).normalized(), 0.8)
+	if not hit.is_empty():
+		FX.impact(self, hit.position as Vector3, hit.get("normal", Vector3.UP) as Vector3)
+		if hit.get("collider") == target and target.has_method("take_damage"):
+			target.take_damage(DAMAGE)
 
 func take_damage(amount: int) -> void:
 	hp -= amount
@@ -234,5 +301,7 @@ func reset_for_round() -> void:
 	fire_timer = 0.0
 	stuck_time = 0.0
 	last_pos = spawn_pos
+	path.clear()
+	path_timer = 0.0
 	# 重新寻找目标
 	call_deferred("_find_target")

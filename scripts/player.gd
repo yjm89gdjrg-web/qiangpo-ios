@@ -26,10 +26,15 @@ var pitch := 0.0
 var recoil := 0.0
 var fire_timer := 0.0
 var hp := 100
+var armor := 100
 var ammo := 30
 var kills := 0
+var deaths := 0
 var weapon_idx := 0
 var reloading := false
+var hit_marker := 0.0        # 命中提示剩余时间（HUD 画叉）
+var gun_kick := 0.0          # 枪身回坐动画
+var gun_base := Vector3.ZERO # WeaponRoot 原始位置
 
 var move_touch_id := -1
 var move_origin := Vector2.ZERO
@@ -44,6 +49,9 @@ var move_region := Rect2()
 var mouse_firing := false
 const Audio = preload("res://scripts/hot_update/audio_manager.gd")
 var sfx = Audio.new()
+const FX = preload("res://scripts/fx.gd")
+var arms: Node3D
+var muzzle_local := Vector3(0.25, -0.20, -1.13)  # 枪口在相机空间的近似位置
 
 @onready var head := $Head
 @onready var camera := $Head/Camera3D
@@ -52,10 +60,24 @@ var sfx = Audio.new()
 func _ready() -> void:
 	sfx.attach(self)
 	_apply_weapon()
+	_attach_arms()
+	gun_base = weapon_root.position
 	# 触屏优先：不锁定鼠标，避免手机上一开局就乱转
 	if OS.has_feature("web") or OS.has_feature("editor"):
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	call_deferred("_link_round_manager")
+
+func _attach_arms() -> void:
+	# 第一人称持枪手臂（只显示给本地玩家）
+	var packed: PackedScene = load("res://scenes/primitives/fps_arms.tscn")
+	if packed == null:
+		return
+	arms = packed.instantiate() as Node3D
+	if arms == null:
+		return
+	arms.name = "Arms"
+	camera.add_child(arms)
+	arms.position = Vector3.ZERO
 
 func _link_round_manager() -> void:
 	round_manager = get_tree().current_scene.get_node_or_null("RoundManager")
@@ -200,6 +222,12 @@ func _physics_process(delta: float) -> void:
 
 	recoil = move_toward(recoil, 0.0, 6.0 * delta * 0.05)
 	head.rotation.x = pitch + recoil
+	if gun_kick > 0.0:
+		gun_kick = move_toward(gun_kick, 0.0, 1.2 * delta)
+	if weapon_root:
+		weapon_root.position = gun_base + Vector3(0, gun_kick * 0.12, gun_kick * 0.55)
+	if hit_marker > 0.0:
+		hit_marker = max(hit_marker - delta, 0.0)
 
 func _fire() -> void:
 	if get_tree().paused:
@@ -208,25 +236,40 @@ func _fire() -> void:
 	fire_timer = w["rate"]
 	ammo -= 1
 	recoil += w["kick"]
+	gun_kick = min(gun_kick + 0.06, 0.12)
 	sfx.play("fire", -8.0)
+
+	var cam_xform: Transform3D = camera.global_transform
+	var muzzle_pos: Vector3 = cam_xform * muzzle_local
+	var forward: Vector3 = -cam_xform.basis.z
 
 	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
 	var origin: Vector3 = camera.global_transform.origin
 	var sp: float = w["spread"]
 	var spread_v: Vector3 = Vector3(randf_range(-sp, sp), randf_range(-sp, sp), 0.0)
-	var dir: Vector3 = -camera.global_transform.basis.z + spread_v
+	var dir: Vector3 = forward + spread_v
 	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(origin, origin + dir.normalized() * 200.0)
 	query.exclude = [self]
 
 	var result: Dictionary = space.intersect_ray(query)
+	var end_pos: Vector3 = origin + dir.normalized() * 200.0
 	if not result.is_empty():
+		end_pos = result.position as Vector3
 		var hit: Node = result.collider as Node
 		if hit and hit.is_in_group("enemy"):
 			hit.take_damage(int(w["dmg"]))
 			sfx.play("hit", -6.0)
+			hit_marker = 0.12
 			if hit.hp <= 0:
 				kills += 1
-		_spawn_impact(result.position as Vector3)
+				_notify_kill("敌人")
+		var n: Vector3 = result.get("normal", Vector3.UP) as Vector3
+		FX.impact(self, result.position as Vector3, n)
+
+	# 枪口火光 + 曳光弹 + 抛壳
+	FX.muzzle_flash(self, muzzle_pos, forward, 1.0)
+	FX.tracer(self, muzzle_pos, end_pos)
+	FX.shell(self, cam_xform * Vector3(0.30, -0.12, -0.55), cam_xform.basis.x)
 
 	if ammo <= 0:
 		_reload()
@@ -254,11 +297,30 @@ func _spawn_impact(pos: Vector3) -> void:
 func take_damage(amount: int) -> void:
 	if hp <= 0:
 		return
+	# 护甲优先吸收 60% 伤害（CF 风格）
+	if armor > 0:
+		var absorbed: int = int(amount * 0.6)
+		absorbed = min(absorbed, armor)
+		armor -= absorbed
+		amount -= absorbed
 	hp -= amount
 	if hp <= 0:
 		hp = 0
 		sfx.play("die")
+		_notify_kill("你（被击杀）")
 		get_tree().call_deferred("reload_current_scene")
+
+func heal_full() -> void:
+	hp = 100
+	armor = 100
+
+func _notify_kill(victim: String) -> void:
+	var scene: Node = get_tree().current_scene
+	if scene == null:
+		return
+	var hud: Node = scene.get_node_or_null("HUD")
+	if hud and hud.has_method("add_kill_feed"):
+		hud.call("add_kill_feed", "你  ➤  " + victim)
 
 func get_hud_text() -> String:
 	var w := _cur()

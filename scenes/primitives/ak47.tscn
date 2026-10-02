@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3]
+[gd_scene load_steps=43 format=3]
 
 [sub_resource type="StandardMaterial3D" id="Mat_dark"]
 albedo_color = Color(0.09, 0.1, 0.11, 1)
@@ -10,6 +10,11 @@ albedo_color = Color(0.3, 0.32, 0.36, 1)
 metallic = 0.85
 roughness = 0.3
 
+[sub_resource type="StandardMaterial3D" id="Mat_steel"]
+albedo_color = Color(0.17, 0.18, 0.2, 1)
+metallic = 0.9
+roughness = 0.35
+
 [sub_resource type="StandardMaterial3D" id="Mat_wood"]
 albedo_color = Color(0.42, 0.26, 0.12, 1)
 metallic = 0.05
@@ -20,172 +25,366 @@ albedo_color = Color(0.2, 0.13, 0.06, 1)
 metallic = 0.2
 roughness = 0.6
 
-[sub_resource type="BoxMesh" id="Mesh_0"]
+[sub_resource type="StandardMaterial3D" id="Mat_rubber"]
+albedo_color = Color(0.05, 0.05, 0.06, 1)
+metallic = 0
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="Mesh_receiver"]
 size = Vector3(0.075, 0.1, 0.3)
 
-[sub_resource type="BoxMesh" id="Mesh_1"]
+[sub_resource type="BoxMesh" id="Mesh_dust"]
 size = Vector3(0.07, 0.045, 0.24)
 
-[sub_resource type="CylinderMesh" id="Mesh_2"]
+[sub_resource type="CylinderMesh" id="Mesh_barrel"]
 top_radius = 0.014
 bottom_radius = 0.014
-height = 0.32
+height = 0.36
 radial_segments = 12
 
-[sub_resource type="CylinderMesh" id="Mesh_3"]
-top_radius = 0.011
-bottom_radius = 0.011
-height = 0.2
+[sub_resource type="CylinderMesh" id="Mesh_barrelfront"]
+top_radius = 0.01
+bottom_radius = 0.01
+height = 0.12
 radial_segments = 12
 
-[sub_resource type="BoxMesh" id="Mesh_4"]
-size = Vector3(0.035, 0.05, 0.05)
-
-[sub_resource type="CylinderMesh" id="Mesh_5"]
-top_radius = 0.02
-bottom_radius = 0.02
+[sub_resource type="CylinderMesh" id="Mesh_muzzle"]
+top_radius = 0.019
+bottom_radius = 0.019
 height = 0.055
 radial_segments = 12
 
-[sub_resource type="BoxMesh" id="Mesh_6"]
-size = Vector3(0.062, 0.06, 0.16)
+[sub_resource type="CylinderMesh" id="Mesh_muzzlering"]
+top_radius = 0.021
+bottom_radius = 0.021
+height = 0.012
+radial_segments = 12
 
-[sub_resource type="BoxMesh" id="Mesh_7"]
-size = Vector3(0.05, 0.035, 0.14)
+[sub_resource type="CylinderMesh" id="Mesh_gastube"]
+top_radius = 0.011
+bottom_radius = 0.011
+height = 0.22
+radial_segments = 12
 
-[sub_resource type="BoxMesh" id="Mesh_8"]
+[sub_resource type="BoxMesh" id="Mesh_gasblock"]
+size = Vector3(0.035, 0.05, 0.05)
+
+[sub_resource type="CylinderMesh" id="Mesh_piston"]
+top_radius = 0.008
+bottom_radius = 0.008
+height = 0.16
+radial_segments = 10
+
+[sub_resource type="BoxMesh" id="Mesh_hglow"]
+size = Vector3(0.062, 0.06, 0.22)
+
+[sub_resource type="BoxMesh" id="Mesh_hgup"]
+size = Vector3(0.05, 0.035, 0.2)
+
+[sub_resource type="BoxMesh" id="Mesh_vent"]
+size = Vector3(0.066, 0.014, 0.012)
+
+[sub_resource type="BoxMesh" id="Mesh_fsbase"]
 size = Vector3(0.03, 0.02, 0.03)
 
-[sub_resource type="PrismMesh" id="Mesh_9"]
+[sub_resource type="PrismMesh" id="Mesh_fspost"]
 size = Vector3(0.014, 0.05, 0.014)
 left_to_right = 0.5
 
-[sub_resource type="BoxMesh" id="Mesh_10"]
+[sub_resource type="TorusMesh" id="Mesh_fshood"]
+inner_radius = 0.012
+outer_radius = 0.022
+rings = 12
+ring_segments = 6
+
+[sub_resource type="BoxMesh" id="Mesh_rsbase"]
 size = Vector3(0.03, 0.018, 0.03)
 
-[sub_resource type="BoxMesh" id="Mesh_11"]
+[sub_resource type="PrismMesh" id="Mesh_rsleaf"]
+size = Vector3(0.028, 0.02, 0.006)
+left_to_right = 0.5
+
+[sub_resource type="BoxMesh" id="Mesh_charging"]
+size = Vector3(0.012, 0.012, 0.05)
+
+[sub_resource type="BoxMesh" id="Mesh_eject"]
+size = Vector3(0.02, 0.022, 0.06)
+
+[sub_resource type="BoxMesh" id="Mesh_bolt"]
+size = Vector3(0.03, 0.03, 0.12)
+
+[sub_resource type="BoxMesh" id="Mesh_grip"]
 size = Vector3(0.05, 0.13, 0.06)
 
-[sub_resource type="BoxMesh" id="Mesh_12"]
+[sub_resource type="BoxMesh" id="Mesh_gripcap"]
+size = Vector3(0.052, 0.012, 0.062)
+
+[sub_resource type="BoxMesh" id="Mesh_tguard"]
 size = Vector3(0.03, 0.012, 0.07)
 
-[sub_resource type="BoxMesh" id="Mesh_13"]
+[sub_resource type="BoxMesh" id="Mesh_trigger"]
 size = Vector3(0.01, 0.022, 0.012)
 
-[sub_resource type="BoxMesh" id="Mesh_14"]
+[sub_resource type="BoxMesh" id="Mesh_magrelease"]
+size = Vector3(0.008, 0.02, 0.012)
+
+[sub_resource type="BoxMesh" id="Mesh_selector"]
+size = Vector3(0.032, 0.008, 0.05)
+
+[sub_resource type="BoxMesh" id="Mesh_magup"]
 size = Vector3(0.048, 0.12, 0.075)
 
-[sub_resource type="BoxMesh" id="Mesh_15"]
+[sub_resource type="BoxMesh" id="Mesh_maglow"]
 size = Vector3(0.048, 0.1, 0.07)
 
-[sub_resource type="BoxMesh" id="Mesh_16"]
+[sub_resource type="BoxMesh" id="Mesh_magbase"]
+size = Vector3(0.05, 0.014, 0.08)
+
+[sub_resource type="BoxMesh" id="Mesh_stock"]
 size = Vector3(0.06, 0.09, 0.2)
 
-[sub_resource type="BoxMesh" id="Mesh_17"]
+[sub_resource type="BoxMesh" id="Mesh_stockcomb"]
 size = Vector3(0.05, 0.03, 0.17)
 
-[sub_resource type="BoxMesh" id="Mesh_18"]
+[sub_resource type="BoxMesh" id="Mesh_trunnion"]
+size = Vector3(0.065, 0.08, 0.03)
+
+[sub_resource type="BoxMesh" id="Mesh_butt"]
 size = Vector3(0.065, 0.11, 0.02)
+
+[sub_resource type="TorusMesh" id="Mesh_sling"]
+inner_radius = 0.006
+outer_radius = 0.014
+rings = 10
+ring_segments = 6
+
+[sub_resource type="CylinderMesh" id="Mesh_screw"]
+top_radius = 0.004
+bottom_radius = 0.004
+height = 0.008
+radial_segments = 8
+
+[sub_resource type="CylinderMesh" id="Mesh_rod"]
+top_radius = 0.004
+bottom_radius = 0.004
+height = 0.3
+radial_segments = 8
 
 [node name="ak47" type="Node3D"]
 
 [node name="Receiver" type="MeshInstance3D" parent="."]
 position = Vector3(0, 0, -0.05)
-mesh = SubResource("Mesh_0")
+mesh = SubResource("Mesh_receiver")
 material_override = SubResource("Mat_dark")
 
 [node name="DustCover" type="MeshInstance3D" parent="."]
 position = Vector3(0, 0.065, -0.06)
-mesh = SubResource("Mesh_1")
+mesh = SubResource("Mesh_dust")
 material_override = SubResource("Mat_dark")
 
 [node name="Barrel" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.02, -0.46)
+position = Vector3(0, 0.02, -0.4)
 rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_2")
+mesh = SubResource("Mesh_barrel")
 material_override = SubResource("Mat_metal")
 
-[node name="GasTube" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.055, -0.3)
+[node name="BarrelFront" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.02, -0.61)
 rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_3")
-material_override = SubResource("Mat_metal")
-
-[node name="GasBlock" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.045, -0.42)
-mesh = SubResource("Mesh_4")
+mesh = SubResource("Mesh_barrelfront")
 material_override = SubResource("Mat_metal")
 
 [node name="MuzzleBrake" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.02, -0.645)
+position = Vector3(0, 0.02, -0.655)
 rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_5")
+mesh = SubResource("Mesh_muzzle")
 material_override = SubResource("Mat_metal")
 
+[node name="MuzzleRing" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.02, -0.688)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_muzzlering")
+material_override = SubResource("Mat_steel")
+
+[node name="GasTube" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.055, -0.34)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_gastube")
+material_override = SubResource("Mat_metal")
+
+[node name="GasBlock" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.045, -0.5)
+mesh = SubResource("Mesh_gasblock")
+material_override = SubResource("Mat_metal")
+
+[node name="GasPiston" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.055, -0.19)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_piston")
+material_override = SubResource("Mat_steel")
+
 [node name="HandguardLower" type="MeshInstance3D" parent="."]
-position = Vector3(0, -0.005, -0.33)
-mesh = SubResource("Mesh_6")
+position = Vector3(0, -0.005, -0.3)
+mesh = SubResource("Mesh_hglow")
 material_override = SubResource("Mat_wood")
 
 [node name="HandguardUpper" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.045, -0.32)
-mesh = SubResource("Mesh_7")
+position = Vector3(0, 0.045, -0.3)
+mesh = SubResource("Mesh_hgup")
 material_override = SubResource("Mat_wood")
 
+[node name="HandguardVent1" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.036, -0.26)
+mesh = SubResource("Mesh_vent")
+material_override = SubResource("Mat_dark")
+
+[node name="HandguardVent2" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.036, -0.34)
+mesh = SubResource("Mesh_vent")
+material_override = SubResource("Mat_dark")
+
 [node name="FrontSightBase" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.055, -0.44)
-mesh = SubResource("Mesh_8")
+position = Vector3(0, 0.05, -0.53)
+mesh = SubResource("Mesh_fsbase")
 material_override = SubResource("Mat_metal")
 
 [node name="FrontSightPost" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.082, -0.44)
-mesh = SubResource("Mesh_9")
+position = Vector3(0, 0.078, -0.53)
+mesh = SubResource("Mesh_fspost")
 material_override = SubResource("Mat_metal")
 
-[node name="RearSight" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.065, -0.19)
-mesh = SubResource("Mesh_10")
+[node name="FrontSightHood" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.088, -0.53)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_fshood")
 material_override = SubResource("Mat_metal")
+
+[node name="RearSightBase" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.062, -0.17)
+mesh = SubResource("Mesh_rsbase")
+material_override = SubResource("Mat_metal")
+
+[node name="RearSightLeaf" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.078, -0.17)
+mesh = SubResource("Mesh_rsleaf")
+material_override = SubResource("Mat_metal")
+
+[node name="ChargingHandle" type="MeshInstance3D" parent="."]
+position = Vector3(0.045, 0.03, -0.05)
+mesh = SubResource("Mesh_charging")
+material_override = SubResource("Mat_steel")
+
+[node name="EjectionPort" type="MeshInstance3D" parent="."]
+position = Vector3(0.037, 0.03, -0.06)
+mesh = SubResource("Mesh_eject")
+material_override = SubResource("Mat_dark")
+
+[node name="BoltCarrier" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.02, -0.05)
+mesh = SubResource("Mesh_bolt")
+material_override = SubResource("Mat_steel")
 
 [node name="PistolGrip" type="MeshInstance3D" parent="."]
 position = Vector3(0, -0.1, -0.02)
 rotation = Vector3(-0.25, 0, 0)
-mesh = SubResource("Mesh_11")
+mesh = SubResource("Mesh_grip")
 material_override = SubResource("Mat_wood")
+
+[node name="GripCap" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.158, -0.008)
+rotation = Vector3(-0.25, 0, 0)
+mesh = SubResource("Mesh_gripcap")
+material_override = SubResource("Mat_dark")
 
 [node name="TriggerGuard" type="MeshInstance3D" parent="."]
 position = Vector3(0, -0.055, -0.06)
-mesh = SubResource("Mesh_12")
+mesh = SubResource("Mesh_tguard")
 material_override = SubResource("Mat_dark")
 
 [node name="Trigger" type="MeshInstance3D" parent="."]
 position = Vector3(0, -0.05, -0.055)
-mesh = SubResource("Mesh_13")
+mesh = SubResource("Mesh_trigger")
 material_override = SubResource("Mat_accent")
+
+[node name="MagRelease" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.055, -0.1)
+mesh = SubResource("Mesh_magrelease")
+material_override = SubResource("Mat_steel")
+
+[node name="SelectorSwitch" type="MeshInstance3D" parent="."]
+position = Vector3(0.041, 0.0, -0.02)
+mesh = SubResource("Mesh_selector")
+material_override = SubResource("Mat_steel")
 
 [node name="MagazineUpper" type="MeshInstance3D" parent="."]
 position = Vector3(0, -0.11, -0.095)
 rotation = Vector3(0.3, 0, 0)
-mesh = SubResource("Mesh_14")
+mesh = SubResource("Mesh_magup")
 material_override = SubResource("Mat_accent")
 
 [node name="MagazineLower" type="MeshInstance3D" parent="."]
 position = Vector3(0, -0.185, -0.055)
 rotation = Vector3(0.55, 0, 0)
-mesh = SubResource("Mesh_15")
+mesh = SubResource("Mesh_maglow")
 material_override = SubResource("Mat_accent")
+
+[node name="MagazineBase" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.225, -0.035)
+rotation = Vector3(0.55, 0, 0)
+mesh = SubResource("Mesh_magbase")
+material_override = SubResource("Mat_dark")
 
 [node name="Stock" type="MeshInstance3D" parent="."]
 position = Vector3(0, -0.02, 0.16)
-mesh = SubResource("Mesh_16")
+mesh = SubResource("Mesh_stock")
 material_override = SubResource("Mat_wood")
 
 [node name="StockComb" type="MeshInstance3D" parent="."]
 position = Vector3(0, 0.02, 0.15)
-mesh = SubResource("Mesh_17")
+mesh = SubResource("Mesh_stockcomb")
 material_override = SubResource("Mat_wood")
+
+[node name="RearTrunnion" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0, 0.085)
+mesh = SubResource("Mesh_trunnion")
+material_override = SubResource("Mat_steel")
 
 [node name="ButtPlate" type="MeshInstance3D" parent="."]
 position = Vector3(0, -0.025, 0.27)
-mesh = SubResource("Mesh_18")
-material_override = SubResource("Mat_dark")
+mesh = SubResource("Mesh_butt")
+material_override = SubResource("Mat_rubber")
+
+[node name="SlingLoopFront" type="MeshInstance3D" parent="."]
+position = Vector3(0.04, 0.02, -0.33)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_sling")
+material_override = SubResource("Mat_steel")
+
+[node name="SlingLoopRear" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.06, 0.24)
+mesh = SubResource("Mesh_sling")
+material_override = SubResource("Mat_steel")
+
+[node name="ScrewFront" type="MeshInstance3D" parent="."]
+position = Vector3(0.038, 0.05, -0.12)
+rotation = Vector3(0, 0, 1.570796)
+mesh = SubResource("Mesh_screw")
+material_override = SubResource("Mat_steel")
+
+[node name="ScrewRear" type="MeshInstance3D" parent="."]
+position = Vector3(0.038, 0.05, 0.03)
+rotation = Vector3(0, 0, 1.570796)
+mesh = SubResource("Mesh_screw")
+material_override = SubResource("Mat_steel")
+
+[node name="CleaningRod" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.038, -0.3)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_rod")
+material_override = SubResource("Mat_steel")
+
+[node name="BarrelNut" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.02, -0.225)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_muzzlering")
+material_override = SubResource("Mat_metal")

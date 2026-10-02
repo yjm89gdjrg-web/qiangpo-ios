@@ -23,6 +23,7 @@ var ct_score := 0
 var round_number := 1
 const Audio = preload("res://scripts/hot_update/audio_manager.gd")
 var sfx = Audio.new()
+const FX = preload("res://scripts/fx.gd")
 
 func _ready() -> void:
 	sfx.attach(self)
@@ -66,6 +67,7 @@ func _process(delta: float) -> void:
 			result = "T 方胜利！目标已爆炸 (%d:%d)" % [t_score, ct_score]
 			phase = result
 			sfx.play("explode")
+			FX.explosion(self, site_position)
 			result_timer = 0.0
 			return
 	if not bomb_planted and player and player.global_position.distance_to(site_position) <= SITE_RADIUS:
@@ -119,7 +121,10 @@ func _reset_round() -> void:
 	phase = "前往 %s" % site_name
 	# 重置玩家
 	if player and is_instance_valid(player):
-		player.hp = 100
+		if player.has_method("heal_full"):
+			player.heal_full()
+		else:
+			player.hp = 100
 		player.position = Vector3(0, 1, 8)  # 玩家出生点
 		player.reset_mobile_input()
 	# 重置所有 bots

@@ -5,6 +5,16 @@ extends CanvasLayer
 
 var status: Label
 var scoreboard: Label
+var hp_label: Label
+var armor_label: Label
+var ammo_label: Label
+var weapon_label: Label
+var killfeed: VBoxContainer
+var hitmarker: Control
+var hp_fill: ColorRect
+var armor_fill: ColorRect
+var hp_bar_bg: Panel
+var armor_bar_bg: Panel
 var action_button: Button
 var weapon_button: Button
 var jump_button: Button
@@ -67,6 +77,7 @@ func _ready() -> void:
 			arm.position = Vector2(21, 22 + gap)
 		crosshair.add_child(arm)
 	add_child(crosshair)
+	_build_combat_hud()
 	move_region = Panel.new()
 	move_region.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var style := StyleBoxFlat.new()
@@ -119,6 +130,44 @@ func _layout() -> void:
 		scoreboard.position = area.position + Vector2(0, 18)
 		scoreboard.size = Vector2(area.size.x, 50)
 		scoreboard.add_theme_font_size_override("font_size", int(clamp(vp.y * 0.04, 20.0, 36.0)))
+	var stat_fs := int(clamp(vp.y * 0.038, 18.0, 32.0))
+	var bar_w: float = clampf(area.size.x * 0.20, 150.0, 300.0)
+	var bar_h: float = clampf(vp.y * 0.035, 16.0, 26.0)
+	var base_y: float = area.position.y + area.size.y * 0.84
+	if hp_bar_bg:
+		hp_bar_bg.position = Vector2(area.position.x + area.size.x * 0.28, base_y)
+		hp_bar_bg.size = Vector2(bar_w, bar_h)
+	if armor_bar_bg:
+		armor_bar_bg.position = Vector2(area.position.x + area.size.x * 0.28, base_y + bar_h + 6)
+		armor_bar_bg.size = Vector2(bar_w, bar_h)
+	if hp_label:
+		hp_label.position = Vector2(area.position.x + area.size.x * 0.28 - 60, base_y - 6)
+		hp_label.size = Vector2(56, bar_h + 12)
+		hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		hp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		hp_label.add_theme_font_size_override("font_size", stat_fs)
+	if armor_label:
+		armor_label.position = Vector2(area.position.x + area.size.x * 0.28 - 60, base_y + bar_h)
+		armor_label.size = Vector2(56, bar_h + 12)
+		armor_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		armor_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		armor_label.add_theme_font_size_override("font_size", stat_fs)
+	if ammo_label:
+		ammo_label.position = Vector2(area.position.x + area.size.x * 0.50, base_y - 18)
+		ammo_label.size = Vector2(area.size.x * 0.16, stat_fs * 2.4)
+		ammo_label.add_theme_font_size_override("font_size", int(stat_fs * 1.6))
+	if weapon_label:
+		weapon_label.position = Vector2(area.position.x + area.size.x * 0.50, base_y + stat_fs * 1.6)
+		weapon_label.size = Vector2(area.size.x * 0.16, stat_fs)
+		weapon_label.add_theme_font_size_override("font_size", int(stat_fs * 0.8))
+	if killfeed:
+		killfeed.position = Vector2(area.position.x + area.size.x - 320, area.position.y + 70)
+		killfeed.size = Vector2(300, 160)
+		for child in killfeed.get_children():
+			if child is Label:
+				(child as Label).add_theme_font_size_override("font_size", int(stat_fs * 0.7))
+	if hitmarker:
+		hitmarker.position = (area.position + area.size * 0.5 - hitmarker.size * 0.5).round()
 	var controls := {"fire": fire_button, "jump": jump_button, "switch": weapon_button, "plant": action_button, "move": move_region}
 	for id in controls:
 		var control: Control = controls[id]
@@ -142,6 +191,127 @@ func _layout() -> void:
 	if is_instance_valid(player):
 		player.move_region = layout.rect_for("move", vp)
 		player.reset_mobile_input()
+
+func _build_combat_hud() -> void:
+	# 命中标记（中心 X，命中时短暂显示）
+	hitmarker = Control.new()
+	hitmarker.name = "HitMarker"
+	hitmarker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hitmarker.size = Vector2(40, 40)
+	hitmarker.visible = false
+	var hm_color := Color(1.0, 0.32, 0.28, 0.95)
+	for ang in [PI / 4.0, -PI / 4.0]:
+		var bar := ColorRect.new()
+		bar.color = hm_color
+		bar.size = Vector2(24, 3)
+		bar.pivot_offset = Vector2(12, 1.5)
+		bar.position = Vector2(8, 18.5)
+		bar.rotation = ang
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hitmarker.add_child(bar)
+	add_child(hitmarker)
+
+	# 左下：血量条 + 护甲条（CF 风格）
+	hp_bar_bg = _make_bar(Color(0.12, 0.16, 0.20, 0.72))
+	hp_fill = ColorRect.new()
+	hp_fill.color = Color(0.32, 0.86, 0.38, 1.0)
+	hp_bar_bg.add_child(hp_fill)
+	add_child(hp_bar_bg)
+	hp_label = _make_stat_label()
+	add_child(hp_label)
+
+	armor_bar_bg = _make_bar(Color(0.12, 0.16, 0.20, 0.72))
+	armor_fill = ColorRect.new()
+	armor_fill.color = Color(0.36, 0.62, 0.95, 1.0)
+	armor_bar_bg.add_child(armor_fill)
+	add_child(armor_bar_bg)
+	armor_label = _make_stat_label()
+	add_child(armor_label)
+
+	# 右下：弹药 / 武器名
+	ammo_label = _make_stat_label()
+	ammo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	ammo_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	add_child(ammo_label)
+	weapon_label = _make_stat_label()
+	weapon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	weapon_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	weapon_label.add_theme_color_override("font_color", Color(0.85, 0.9, 0.95, 0.85))
+	add_child(weapon_label)
+
+	# 右上：击杀提示
+	killfeed = VBoxContainer.new()
+	killfeed.name = "KillFeed"
+	killfeed.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	killfeed.alignment = BoxContainer.ALIGNMENT_END
+	killfeed.add_theme_constant_override("separation", 4)
+	add_child(killfeed)
+
+func _update_combat_hud() -> void:
+	if not is_instance_valid(player):
+		return
+	var hp_val: int = player.hp
+	var armor_val: int = player.armor if "armor" in player else 0
+	if hp_label:
+		hp_label.text = str(hp_val)
+	if armor_label:
+		armor_label.text = str(armor_val)
+	if hp_fill and hp_bar_bg:
+		var w: float = maxf(hp_bar_bg.size.x - 4.0, 1.0)
+		hp_fill.position = Vector2(2, 2)
+		hp_fill.size = Vector2(w * clampf(float(hp_val) / 100.0, 0.0, 1.0), maxf(hp_bar_bg.size.y - 4.0, 1.0))
+		hp_fill.color = Color(0.32, 0.86, 0.38) if hp_val > 35 else Color(0.92, 0.28, 0.24)
+	if armor_fill and armor_bar_bg:
+		var w2: float = maxf(armor_bar_bg.size.x - 4.0, 1.0)
+		armor_fill.position = Vector2(2, 2)
+		armor_fill.size = Vector2(w2 * clampf(float(armor_val) / 100.0, 0.0, 1.0), maxf(armor_bar_bg.size.y - 4.0, 1.0))
+	if ammo_label:
+		if player.reloading:
+			ammo_label.text = "装弹中…"
+		else:
+			var mag: int = player.ammo
+			var cap: int = player._cur()["ammo"]
+			ammo_label.text = "%d / %d" % [mag, cap]
+		ammo_label.add_theme_color_override("font_color", Color(0.92, 0.28, 0.24) if player.ammo <= 5 else Color(0.96, 0.98, 1.0))
+	if weapon_label:
+		weapon_label.text = player._cur()["label"]
+	if hitmarker:
+		hitmarker.visible = player.hit_marker > 0.0
+
+func _make_bar(bg: Color) -> Panel:
+	var p := Panel.new()
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = Color(0.7, 0.85, 1.0, 0.35)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(6)
+	p.add_theme_stylebox_override("panel", sb)
+	return p
+
+func _make_stat_label() -> Label:
+	var l := Label.new()
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.add_theme_color_override("font_color", Color(0.96, 0.98, 1.0, 1.0))
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.75))
+	l.add_theme_constant_override("outline_size", 4)
+	return l
+
+func add_kill_feed(text: String) -> void:
+	if killfeed == null:
+		return
+	var row := Label.new()
+	row.text = text
+	row.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_color_override("font_color", Color(1.0, 0.92, 0.6, 1.0))
+	row.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	row.add_theme_constant_override("outline_size", 4)
+	row.add_theme_font_size_override("font_size", 18)
+	killfeed.add_child(row)
+	while killfeed.get_child_count() > 5:
+		killfeed.get_child(0).queue_free()
+		break
 
 func _action_button_input(event: InputEvent, control: Button) -> void:
 	if get_tree().paused:
@@ -197,6 +367,7 @@ func _process(_delta: float) -> void:
 		var r: int = round_manager.round_number
 		var max_r: int = round_manager.MAX_ROUNDS
 		scoreboard.text = "T: %d | CT: %d | 回合: %d/%d" % [t, ct, r, max_r]
+	_update_combat_hud()
 	if action_button and round_manager:
 		action_button.text = "拆包" if round_manager.bomb_planted else "下包"
 
