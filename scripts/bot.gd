@@ -30,7 +30,18 @@ var path_timer := 0.0
 var team := "CT"  # 队伍："T" 或 "CT"
 var spawn_pos := Vector3.ZERO
 var anim: AnimationPlayer = null
+var gun_mount: BoneAttachment3D = null
+var gun_node: Node3D = null
+var model_node: Node3D = null
+var tinted_mats: Array[StandardMaterial3D] = []
+var recoil_t := 0.0
+var dead := false
+var death_t := 0.0
+const GUN_POS := Vector3(0.0, 0.06, 0.02)
+const GUN_ROT := Vector3(-1.5708, 0.0, 1.5708)
+const GUN_SCALE := 1.0
 const FX = preload("res://scripts/fx.gd")
+const GUN_SCENE = preload("res://scenes/primitives/ak47.tscn")
 
 func _ready() -> void:
 	add_to_group("bot")
@@ -44,16 +55,56 @@ func _ready() -> void:
 	call_deferred("_collect_obstacles")
 	call_deferred("_setup_model")
 
+func _process(_delta: float) -> void:
+	# 每帧把枪对准角色正前方（位置仍跟随右手骨骼）
+	if dead:
+		return
+	if gun_node != null and is_instance_valid(gun_node):
+		_orient_gun(gun_node)
+
 func _setup_model() -> void:
-	# 用真实士兵模型替代胶囊体：设置动画 + 按队伍染色
+	# 用真实士兵模型替代胶囊体：设置动画 + 按队伍染色 + 挂枪
 	var body: Node = get_node_or_null("Body")
 	if body == null:
 		return
+	model_node = body.get_node_or_null("Model") as Node3D
 	anim = _find_anim_player(body)
 	if anim != null:
 		anim.play("Idle")
 	var tint := Color(1.0, 0.30, 0.26) if team == "CT" else Color(0.42, 0.66, 1.0)
 	_tint_meshes(body, tint)
+	var sk: Skeleton3D = null
+	for n in body.find_children("*", "Skeleton3D", true, false):
+		sk = n as Skeleton3D
+		break
+	if sk != null:
+		_attach_gun(sk)
+
+func _attach_gun(sk: Skeleton3D) -> void:
+	gun_mount = BoneAttachment3D.new()
+	gun_mount.name = "GunMount"
+	sk.add_child(gun_mount)
+	gun_mount.bone_name = "mixamorig_RightHand"
+	var gun: Node3D = GUN_SCENE.instantiate() as Node3D
+	gun.name = "Gun"
+	gun_mount.add_child(gun)
+	gun.scale = Vector3.ONE * GUN_SCALE
+	gun_node = gun
+	call_deferred("_orient_gun", gun)
+
+func _orient_gun(gun: Node3D) -> void:
+	# 让枪管朝角色正前方，握把落在右手上
+	if not is_instance_valid(gun):
+		return
+	var fwd: Vector3 = -global_transform.basis.z
+	var up: Vector3 = Vector3.UP
+	var right: Vector3 = fwd.cross(up).normalized()
+	if right.length_squared() < 0.001:
+		right = Vector3.RIGHT
+	var b := Basis(right, up, -fwd).scaled(Vector3.ONE * GUN_SCALE)
+	var grip: Vector3 = Vector3(0, -0.10, -0.02) * GUN_SCALE
+	var mount_pos: Vector3 = gun_mount.global_position
+	gun.global_transform = Transform3D(b, mount_pos - b * grip)
 
 func _find_anim_player(node: Node) -> AnimationPlayer:
 	if node is AnimationPlayer:
@@ -78,6 +129,7 @@ func _tint_meshes(node: Node, tint: Color) -> void:
 			else:
 				mat = StandardMaterial3D.new()
 			mat.albedo_color = mat.albedo_color.lerp(Color(tint.r, tint.g, tint.b, mat.albedo_color.a), 0.62)
+			tinted_mats.append(mat)
 			mi.set_surface_override_material(s, mat)
 
 func _find_target() -> void:
@@ -246,6 +298,16 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_track_stuck(delta)
 	_update_anim()
+	_update_recoil(delta)
+
+func _update_recoil(delta: float) -> void:
+	if model_node == null:
+		return
+	if recoil_t > 0.0:
+		recoil_t = maxf(recoil_t - delta, 0.0)
+	model_node.rotation.x = -recoil_t * 0.6
+	if gun_node != null and is_instance_valid(gun_node):
+		_orient_gun(gun_node)
 
 func _update_anim() -> void:
 	if anim == null:
@@ -336,13 +398,38 @@ func _shoot_at_player() -> void:
 			target.take_damage(DAMAGE)
 
 func take_damage(amount: int) -> void:
+	if dead:
+		return
 	hp -= amount
+	recoil_t = maxf(recoil_t, 0.16)
 	if hp <= 0:
-		queue_free()
+		_die()
+
+func _die() -> void:
+	dead = true
+	hp = 0
+	set_physics_process(false)
+	if anim != null:
+		anim.stop()
+	# 倒地 + 下沉 + 淡出
+	for m in tinted_mats:
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(self, "rotation:x", rotation.x + 1.45, 0.55).set_ease(Tween.EASE_OUT)
+	tw.tween_property(self, "position:y", position.y - 0.35, 0.75)
+	tw.chain().tween_interval(0.9)
+	for m in tinted_mats:
+		tw.parallel().tween_property(m, "albedo_color:a", 0.0, 0.9).set_delay(0.9)
+	tw.chain().tween_callback(queue_free)
 
 func reset_for_round() -> void:
 	# 回合重置：恢复血量、回到出生点
 	hp = 100
+	dead = false
+	rotation.x = 0.0
+	for m in tinted_mats:
+		m.albedo_color.a = 1.0
 	global_position = spawn_pos
 	velocity = Vector3.ZERO
 	fire_timer = 0.0
